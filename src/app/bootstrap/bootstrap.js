@@ -4,18 +4,46 @@ import {
   HTTP_STATUS
 } from '../../core/constants/index.js';
 
-export async function bootstrap(_request, _env, _ctx) {
-  const body = {
-    service: APPLICATION.NAME,
-    version: APPLICATION.VERSION,
-    status: 'healthy',
-    runtime: APPLICATION.RUNTIME
-  };
+import { AppError } from '../../core/errors/index.js';
 
-  return new Response(JSON.stringify(body, null, 2), {
-    status: HTTP_STATUS.OK,
-    headers: {
-      'content-type': CONTENT_TYPE.JSON
-    }
-  });
+export async function bootstrap(_request, _env, _ctx) {
+  try {
+    const body = {
+      service: APPLICATION.NAME,
+      version: APPLICATION.VERSION,
+      status: 'healthy',
+      runtime: APPLICATION.RUNTIME
+    };
+
+    return new Response(JSON.stringify(body, null, 2), {
+      status: HTTP_STATUS.OK,
+      headers: {
+        'content-type': CONTENT_TYPE.JSON
+      }
+    });
+  } catch (error) {
+    const appError =
+      error instanceof AppError
+        ? error
+        : new AppError({
+            message: 'Unexpected bootstrap error'
+          });
+
+    return new Response(
+      JSON.stringify(
+        {
+          error: appError.code,
+          message: appError.message
+        },
+        null,
+        2
+      ),
+      {
+        status: appError.status,
+        headers: {
+          'content-type': CONTENT_TYPE.JSON
+        }
+      }
+    );
+  }
 }
