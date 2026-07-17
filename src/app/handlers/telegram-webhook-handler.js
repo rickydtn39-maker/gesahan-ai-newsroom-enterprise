@@ -3,15 +3,38 @@ import {
   HTTP_STATUS
 } from '../../core/constants/index.js';
 
-export async function telegramWebhookHandler(request) {
-  const update = await request.json();
+import { TOKENS } from '../../core/container/index.js';
+
+import { createTelegramUpdate } from '../../application/dto/telegram-update.js';
+import { dispatchTelegramUpdate } from '../../application/telegram/index.js';
+
+export async function telegramWebhookHandler(
+  request,
+  context
+) {
+  const payload = await request.json();
+
+  const update = createTelegramUpdate(payload);
+
+  const telegramApi =
+    context.container.resolve(
+      TOKENS.TELEGRAM_API
+    );
+
+  const draftRepository =
+    context.container.resolve(
+      TOKENS.DRAFT_REPOSITORY
+    );
+
+  await dispatchTelegramUpdate(update, {
+    telegramApi,
+    draftRepository
+  });
 
   return new Response(
     JSON.stringify(
       {
-        success: true,
-        message: 'Telegram webhook received.',
-        updateId: update.update_id ?? null
+        ok: true
       },
       null,
       2

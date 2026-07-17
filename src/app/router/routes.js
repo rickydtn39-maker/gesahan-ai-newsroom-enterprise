@@ -6,7 +6,7 @@ export function registerRoutes(router) {
   router
     .register('GET', '/', rootHandler)
     .register('GET', '/health', healthHandler)
-    .register('POST', '/telegram/webhook', telegramWebhookHandler);
+    .register('POST', '/webhooks/telegram', telegramWebhookHandler);
 
   return router;
 }

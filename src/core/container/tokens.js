@@ -5,9 +5,9 @@ export const TOKENS = Object.freeze({
 
   DRAFT_REPOSITORY: 'draft-repository',
 
-  METRICS: 'metrics',
+  TELEGRAM_API: 'telegram-api',
 
-  TELEGRAM_PROVIDER: 'telegram-provider',
+  METRICS: 'metrics',
 
   GEMINI_PROVIDER: 'gemini-provider',
 

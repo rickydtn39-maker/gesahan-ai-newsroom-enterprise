@@ -1,6 +1,7 @@
 import { createLogger } from '../logger/index.js';
 
 import { DraftRepository } from '../../infrastructure/persistence/kv/index.js';
+import { TelegramApi } from '../../infrastructure/providers/telegram/index.js';
 
 import { Container } from './container.js';
 import { TOKENS } from './tokens.js';
@@ -19,11 +20,12 @@ export function createContainer(configuration, env) {
 
   container.registerFactory(
     TOKENS.DRAFT_REPOSITORY,
-    () => {
-      return new DraftRepository(
-        env.GESAHAN_DRAFTS
-      );
-    }
+    () => new DraftRepository(env.GESAHAN_DRAFTS)
+  );
+
+  container.registerFactory(
+    TOKENS.TELEGRAM_API,
+    () => new TelegramApi(configuration.telegram.botToken)
   );
 
   return container;
