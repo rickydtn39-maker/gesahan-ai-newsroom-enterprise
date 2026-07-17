@@ -3,6 +3,8 @@ export const TOKENS = Object.freeze({
 
   LOGGER: 'logger',
 
+  DRAFT_REPOSITORY: 'draft-repository',
+
   METRICS: 'metrics',
 
   TELEGRAM_PROVIDER: 'telegram-provider',
