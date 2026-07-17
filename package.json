@@ -1,0 +1,46 @@
+{
+  "name": "gesahan-ai-newsroom-enterprise",
+  "version": "0.1.0",
+  "description": "Enterprise AI Newsroom Platform powered by Cloudflare Workers.",
+  "private": true,
+  "type": "module",
+  "author": "Ricky DTN39",
+  "license": "UNLICENSED",
+  "homepage": "https://github.com/rickydtn39-maker/gesahan-ai-newsroom-enterprise",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rickydtn39-maker/gesahan-ai-newsroom-enterprise.git"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "wrangler deploy --dry-run",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage"
+  },
+  "keywords": [
+    "cloudflare-workers",
+    "telegram",
+    "gemini",
+    "wordpress",
+    "seo",
+    "ocr",
+    "enterprise",
+    "ai-newsroom"
+  ],
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "prettier": "^3.9.5",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.111.0"
+  }
+}
