@@ -5,14 +5,18 @@ import {
 } from '../../core/constants/index.js';
 
 import { AppError } from '../../core/errors/index.js';
+import { createConfiguration } from '../../core/config/index.js';
 
 export async function bootstrap(_request, _env, _ctx) {
   try {
+    const configuration = createConfiguration(_env);
+
     const body = {
       service: APPLICATION.NAME,
       version: APPLICATION.VERSION,
       status: 'healthy',
-      runtime: APPLICATION.RUNTIME
+      runtime: APPLICATION.RUNTIME,
+      environment: configuration.application.environment
     };
 
     return new Response(JSON.stringify(body, null, 2), {
