@@ -5,7 +5,7 @@ export class Router {
     this.#routes.push({
       method: method.toUpperCase(),
       path,
-      handler
+      handler,
     });
 
     return this;
@@ -15,23 +15,19 @@ export class Router {
     const url = new URL(request.url);
     const method = request.method.toUpperCase();
 
-    const route = this.#routes.find(
-      (item) =>
-        item.method === method &&
-        item.path === url.pathname
-    );
+    const route = this.#routes.find((item) => item.method === method && item.path === url.pathname);
 
     if (!route) {
       return new Response(
         JSON.stringify({
           error: 'NOT_FOUND',
-          message: 'Route not found.'
+          message: 'Route not found.',
         }),
         {
           status: 404,
           headers: {
-            'content-type': 'application/json; charset=utf-8'
-          }
+            'content-type': 'application/json; charset=utf-8',
+          },
         }
       );
     }

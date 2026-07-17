@@ -1,8 +1,4 @@
-export async function cancelCommand(
-  update,
-  telegramApi,
-  sessionManager
-) {
+export async function cancelCommand(update, telegramApi, sessionManager) {
   await sessionManager.cancel(update.chatId);
 
   return telegramApi.sendMessage(
@@ -12,7 +8,7 @@ export async function cancelCommand(
       '',
       'Semua draft sementara telah dihapus.',
       '',
-      'Tekan 🆕 Berita Baru untuk memulai kembali.'
+      'Tekan 🆕 Berita Baru untuk memulai kembali.',
     ].join('\n')
   );
 }

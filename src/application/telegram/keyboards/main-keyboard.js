@@ -3,24 +3,24 @@ export function createMainKeyboard() {
     keyboard: [
       [
         {
-          text: '📰 Berita Baru'
-        }
+          text: '📰 Berita Baru',
+        },
       ],
       [
         {
-          text: '📋 Status'
+          text: '📋 Status',
         },
         {
-          text: '❌ Batal'
-        }
+          text: '❌ Batal',
+        },
       ],
       [
         {
-          text: 'ℹ️ Bantuan'
-        }
-      ]
+          text: 'ℹ️ Bantuan',
+        },
+      ],
     ],
     resize_keyboard: true,
-    one_time_keyboard: false
+    one_time_keyboard: false,
   };
 }

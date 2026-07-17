@@ -1,7 +1,4 @@
-import {
-  CONTENT_TYPE,
-  HTTP_STATUS
-} from '../../core/constants/index.js';
+import { CONTENT_TYPE, HTTP_STATUS } from '../../core/constants/index.js';
 
 export async function healthHandler(_request, context) {
   return new Response(
@@ -9,8 +6,7 @@ export async function healthHandler(_request, context) {
       {
         healthy: true,
         timestamp: new Date().toISOString(),
-        environment:
-          context.configuration.application.environment
+        environment: context.configuration.application.environment,
       },
       null,
       2
@@ -18,8 +14,8 @@ export async function healthHandler(_request, context) {
     {
       status: HTTP_STATUS.OK,
       headers: {
-        'content-type': CONTENT_TYPE.JSON
-      }
+        'content-type': CONTENT_TYPE.JSON,
+      },
     }
   );
 }

@@ -4,7 +4,7 @@ export const EDITORIAL_POLICY = Object.freeze({
     'Jangan menggunakan Markdown.',
     'Jangan menambahkan penjelasan.',
     'Jangan menambahkan kalimat pembuka.',
-    'Jangan menambahkan kalimat penutup.'
+    'Jangan menambahkan kalimat penutup.',
   ],
 
   journalism: [
@@ -17,6 +17,6 @@ export const EDITORIAL_POLICY = Object.freeze({
     'Gunakan Bahasa Indonesia baku.',
     'Gunakan struktur piramida terbalik.',
     'Jangan membuat opini.',
-    'Jangan membuat clickbait.'
-  ]
+    'Jangan membuat clickbait.',
+  ],
 });

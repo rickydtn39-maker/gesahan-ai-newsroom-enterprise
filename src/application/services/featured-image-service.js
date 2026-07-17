@@ -14,10 +14,10 @@ export function attachFeaturedImage(draft, photo) {
         fileId: photo.file_id,
         fileUniqueId: photo.file_unique_id,
         width: photo.width,
-        height: photo.height
-      }
+        height: photo.height,
+      },
     },
 
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   });
 }

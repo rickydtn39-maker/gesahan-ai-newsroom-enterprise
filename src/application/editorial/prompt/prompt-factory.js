@@ -2,8 +2,7 @@ import { EditorialBuilder } from './builders/editorial-builder.js';
 
 export class PromptFactory {
   constructor() {
-    this.editorialBuilder =
-      new EditorialBuilder();
+    this.editorialBuilder = new EditorialBuilder();
   }
 
   editorial(job) {

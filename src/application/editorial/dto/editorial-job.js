@@ -21,7 +21,7 @@ export function createEditorialJob(draft) {
       generateSeo: true,
       generateSlug: true,
       generateTags: true,
-      generateExcerpt: true
-    }
+      generateExcerpt: true,
+    },
   });
 }

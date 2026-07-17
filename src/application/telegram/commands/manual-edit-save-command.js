@@ -1,39 +1,26 @@
 import { WORKFLOW_STATE } from '../../../core/constants/index.js';
 import { createReviewKeyboard } from '../keyboards/index.js';
 
-export async function manualEditSaveCommand(
-  update,
-  telegramApi,
-  sessionManager
-) {
+export async function manualEditSaveCommand(update, telegramApi, sessionManager) {
   const draft = await sessionManager.get(update.chatId);
 
   if (!draft) {
-    return telegramApi.sendMessage(
-      update.chatId,
-      'Draft tidak ditemukan.'
-    );
+    return telegramApi.sendMessage(update.chatId, 'Draft tidak ditemukan.');
   }
 
   if (draft.state !== WORKFLOW_STATE.WAITING_MANUAL_EDIT) {
-    return telegramApi.sendMessage(
-      update.chatId,
-      'Sistem tidak sedang dalam mode edit manual.'
-    );
+    return telegramApi.sendMessage(update.chatId, 'Sistem tidak sedang dalam mode edit manual.');
   }
 
   if (!update.hasText) {
-    return telegramApi.sendMessage(
-      update.chatId,
-      'Silakan kirim teks artikel yang sudah diedit.'
-    );
+    return telegramApi.sendMessage(update.chatId, 'Silakan kirim teks artikel yang sudah diedit.');
   }
 
   const previous = draft.editorial ?? {
     article: {},
     seo: {},
     statistics: {},
-    quality: {}
+    quality: {},
   };
 
   const content = update.text.trim();
@@ -47,18 +34,18 @@ export async function manualEditSaveCommand(
       article: {
         title: previous.article?.title ?? 'Tanpa Judul',
         lead: previous.article?.lead ?? '',
-        content
+        content,
       },
       statistics: {
         wordCount,
-        readingTime: Math.max(1, Math.ceil(wordCount / 200))
+        readingTime: Math.max(1, Math.ceil(wordCount / 200)),
       },
       quality: {
         score: previous.quality?.score ?? 0,
-        notes: ['Artikel telah diedit manual oleh wartawan.']
-      }
+        notes: ['Artikel telah diedit manual oleh wartawan.'],
+      },
     },
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 
   await sessionManager.save(updatedDraft);
@@ -72,7 +59,7 @@ export async function manualEditSaveCommand(
       '',
       'Gunakan 📄 Lihat Artikel Lengkap untuk membaca hasil akhir.',
       '',
-      'Silakan pilih tindakan berikutnya.'
+      'Silakan pilih tindakan berikutnya.',
     ].join('\n'),
     createReviewKeyboard()
   );

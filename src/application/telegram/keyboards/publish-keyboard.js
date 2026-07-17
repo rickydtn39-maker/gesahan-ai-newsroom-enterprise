@@ -3,21 +3,21 @@ export function createPublishKeyboard() {
     keyboard: [
       [
         {
-          text: '🚀 Publish Sekarang'
-        }
+          text: '🚀 Publish Sekarang',
+        },
       ],
       [
         {
-          text: '📄 Lihat Artikel Lengkap'
-        }
+          text: '📄 Lihat Artikel Lengkap',
+        },
       ],
       [
         {
-          text: '❌ Batal'
-        }
-      ]
+          text: '❌ Batal',
+        },
+      ],
     ],
     resize_keyboard: true,
-    one_time_keyboard: false
+    one_time_keyboard: false,
   };
 }

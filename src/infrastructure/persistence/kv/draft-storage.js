@@ -13,7 +13,7 @@ export class DraftStorage {
     const key = this.createKey(chatId);
 
     const value = await this.namespace.get(key, {
-      type: 'json'
+      type: 'json',
     });
 
     return value;
@@ -22,10 +22,7 @@ export class DraftStorage {
   async put(chatId, draft) {
     const key = this.createKey(chatId);
 
-    await this.namespace.put(
-      key,
-      JSON.stringify(draft)
-    );
+    await this.namespace.put(key, JSON.stringify(draft));
   }
 
   async delete(chatId) {

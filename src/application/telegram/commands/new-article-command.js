@@ -1,10 +1,6 @@
 import { createDraft } from '../../services/editorial-session.js';
 
-export async function newArticleCommand(
-  update,
-  telegramApi,
-  sessionManager
-) {
+export async function newArticleCommand(update, telegramApi, sessionManager) {
   const state = await sessionManager.getState(update.chatId);
 
   if (state !== 'IDLE') {
@@ -13,16 +9,12 @@ export async function newArticleCommand(
       [
         '⚠️ Anda masih memiliki proses yang belum selesai.',
         '',
-        'Tekan ❌ Batal jika ingin menghapus proses tersebut.'
+        'Tekan ❌ Batal jika ingin menghapus proses tersebut.',
       ].join('\n')
     );
   }
 
-  await sessionManager.create(
-    update.chatId,
-    update.userId,
-    createDraft
-  );
+  await sessionManager.create(update.chatId, update.userId, createDraft);
 
   return telegramApi.sendMessage(
     update.chatId,
@@ -37,7 +29,7 @@ export async function newArticleCommand(
       '',
       'Saya akan mengolah berita menjadi artikel siap terbit.',
       '',
-      'Tekan ❌ Batal kapan saja jika ingin membatalkan proses.'
+      'Tekan ❌ Batal kapan saja jika ingin membatalkan proses.',
     ].join('\n')
   );
 }

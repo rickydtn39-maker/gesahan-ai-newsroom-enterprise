@@ -3,32 +3,32 @@ export function createReviewKeyboard() {
     keyboard: [
       [
         {
-          text: '📄 Lihat Artikel Lengkap'
-        }
+          text: '📄 Lihat Artikel Lengkap',
+        },
       ],
       [
         {
-          text: '✏️ Edit Manual'
+          text: '✏️ Edit Manual',
         },
         {
-          text: '♻️ Rewrite Lagi'
-        }
+          text: '♻️ Rewrite Lagi',
+        },
       ],
       [
         {
-          text: '✅ Siap Publish'
-        }
+          text: '✅ Siap Publish',
+        },
       ],
       [
         {
-          text: '📋 Status'
+          text: '📋 Status',
         },
         {
-          text: '❌ Batal'
-        }
-      ]
+          text: '❌ Batal',
+        },
+      ],
     ],
     resize_keyboard: true,
-    one_time_keyboard: false
+    one_time_keyboard: false,
   };
 }

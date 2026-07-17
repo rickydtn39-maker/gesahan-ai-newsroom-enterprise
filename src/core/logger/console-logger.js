@@ -6,7 +6,7 @@ export class ConsoleLogger extends Logger {
       timestamp: new Date().toISOString(),
       level,
       message,
-      ...context
+      ...context,
     };
 
     console.log(JSON.stringify(payload));

@@ -1,5 +1,4 @@
 import { AiProvider } from '../../../application/ports/ai-provider.js';
-import { GeminiRequest } from './dto/gemini-request.js';
 import { GeminiResponse } from './dto/gemini-response.js';
 import { GeminiMapper } from './gemini-mapper.js';
 
@@ -15,12 +14,6 @@ export class GeminiProvider extends AiProvider {
   async generate(request) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`;
 
-    const geminiRequest = new GeminiRequest({
-      model: this.model,
-      prompt: request.prompt,
-      schema: request.schema
-    });
-
     let lastError;
 
     for (let attempt = 1; attempt <= 2; attempt++) {
@@ -32,7 +25,7 @@ export class GeminiProvider extends AiProvider {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Goog-Api-Key': this.apiKey
+            'X-Goog-Api-Key': this.apiKey,
           },
           body: JSON.stringify({
             contents: [{ parts: [{ text: request.prompt }] }],
@@ -41,10 +34,10 @@ export class GeminiProvider extends AiProvider {
               topP: 0.95,
               maxOutputTokens: 8192,
               responseMimeType: 'application/json',
-              responseSchema: request.schema
-            }
+              responseSchema: request.schema,
+            },
           }),
-          signal: controller.signal
+          signal: controller.signal,
         });
 
         clearTimeout(timeoutId);
@@ -68,7 +61,8 @@ export class GeminiProvider extends AiProvider {
       } catch (error) {
         clearTimeout(timeoutId);
         if (error.name === 'AbortError') {
-          throw new Error('Gemini timeout after 30s.');
+          // Menambahkan cause: error agar linter bahagia
+          throw new Error('Gemini timeout after 30s.', { cause: error });
         }
         throw error;
       }

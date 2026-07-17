@@ -4,9 +4,6 @@ export class GeminiResponse {
   }
 
   getText() {
-    return (
-      this.response?.candidates?.[0]?.content?.parts?.[0]?.text ??
-      ''
-    );
+    return this.response?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
   }
 }

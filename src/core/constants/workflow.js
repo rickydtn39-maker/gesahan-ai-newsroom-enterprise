@@ -17,5 +17,5 @@ export const WORKFLOW_STATE = Object.freeze({
 
   COMPLETED: 'COMPLETED',
 
-  CANCELLED: 'CANCELLED'
+  CANCELLED: 'CANCELLED',
 });

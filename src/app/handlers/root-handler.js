@@ -1,8 +1,4 @@
-import {
-  APPLICATION,
-  CONTENT_TYPE,
-  HTTP_STATUS
-} from '../../core/constants/index.js';
+import { APPLICATION, CONTENT_TYPE, HTTP_STATUS } from '../../core/constants/index.js';
 
 export async function rootHandler(_request, context) {
   return new Response(
@@ -11,9 +7,8 @@ export async function rootHandler(_request, context) {
         service: APPLICATION.NAME,
         version: APPLICATION.VERSION,
         runtime: APPLICATION.RUNTIME,
-        environment:
-          context.configuration.application.environment,
-        status: 'healthy'
+        environment: context.configuration.application.environment,
+        status: 'healthy',
       },
       null,
       2
@@ -21,8 +16,8 @@ export async function rootHandler(_request, context) {
     {
       status: HTTP_STATUS.OK,
       headers: {
-        'content-type': CONTENT_TYPE.JSON
-      }
+        'content-type': CONTENT_TYPE.JSON,
+      },
     }
   );
 }

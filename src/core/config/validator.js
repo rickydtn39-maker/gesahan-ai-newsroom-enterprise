@@ -5,7 +5,7 @@ export function validateConfiguration(configuration) {
   if (!configuration) {
     throw new AppError({
       message: 'Configuration is required.',
-      code: ERROR_CODE.CONFIGURATION
+      code: ERROR_CODE.CONFIGURATION,
     });
   }
 

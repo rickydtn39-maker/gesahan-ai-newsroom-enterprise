@@ -1,9 +1,5 @@
 export class GeminiRequest {
-  constructor({
-    model,
-    prompt,
-    schema
-  }) {
+  constructor({ model, prompt, schema }) {
     this.model = model;
     this.prompt = prompt;
     this.schema = schema;
@@ -15,11 +11,11 @@ export class GeminiRequest {
         {
           parts: [
             {
-              text: this.prompt
-            }
-          ]
-        }
-      ]
+              text: this.prompt,
+            },
+          ],
+        },
+      ],
     };
   }
 }

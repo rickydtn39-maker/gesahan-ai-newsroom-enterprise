@@ -23,5 +23,5 @@ export const TOKENS = Object.freeze({
 
   OCR_PROVIDER: 'ocr-provider',
 
-  SEO_PROVIDER: 'seo-provider'
+  SEO_PROVIDER: 'seo-provider',
 });

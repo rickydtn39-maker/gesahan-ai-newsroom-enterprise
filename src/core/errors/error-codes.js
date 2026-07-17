@@ -19,5 +19,5 @@ export const ERROR_CODE = Object.freeze({
 
   WORKFLOW: 'WORKFLOW_ERROR',
 
-  INTERNAL: 'INTERNAL_ERROR'
+  INTERNAL: 'INTERNAL_ERROR',
 });

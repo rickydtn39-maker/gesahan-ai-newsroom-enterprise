@@ -3,5 +3,5 @@ export const PROVIDER = Object.freeze({
   OCR: 'ocr',
   GEMINI: 'gemini',
   SEO: 'seo',
-  WORDPRESS: 'wordpress'
+  WORDPRESS: 'wordpress',
 });

@@ -10,7 +10,7 @@ export async function startCommand(update, telegramApi) {
       '',
       'Saya akan membantu mengubah naskah menjadi artikel siap terbit dengan standar redaksi.',
       '',
-      'Silakan pilih menu di bawah.'
+      'Silakan pilih menu di bawah.',
     ].join('\n'),
     createMainKeyboard()
   );

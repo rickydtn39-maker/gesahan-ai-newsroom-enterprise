@@ -15,7 +15,7 @@ export class EditorialEngine {
     return this.aiProvider.generate({
       model: request.ai.model,
       prompt,
-      schema: request.ai.schema
+      schema: request.ai.schema,
     });
   }
 }

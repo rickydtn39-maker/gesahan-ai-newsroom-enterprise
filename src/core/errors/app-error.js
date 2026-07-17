@@ -7,7 +7,7 @@ export class AppError extends Error {
     code = ERROR_CODE.UNKNOWN,
     status = HTTP_STATUS.INTERNAL_SERVER_ERROR,
     details = null,
-    cause = null
+    cause = null,
   }) {
     super(message);
 

@@ -3,10 +3,7 @@ export function createTelegramUpdate(update) {
 
   const photos = message.photo ?? [];
 
-  const largestPhoto =
-    photos.length > 0
-      ? photos[photos.length - 1]
-      : null;
+  const largestPhoto = photos.length > 0 ? photos[photos.length - 1] : null;
 
   return Object.freeze({
     updateId: update.update_id ?? null,
@@ -27,6 +24,6 @@ export function createTelegramUpdate(update) {
 
     hasPhoto: Boolean(largestPhoto),
 
-    hasDocument: Boolean(message.document)
+    hasDocument: Boolean(message.document),
   });
 }

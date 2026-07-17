@@ -10,10 +10,7 @@ export class DraftRepository {
   }
 
   async save(draft) {
-    await this.storage.put(
-      draft.chatId,
-      draft
-    );
+    await this.storage.put(draft.chatId, draft);
 
     return draft;
   }

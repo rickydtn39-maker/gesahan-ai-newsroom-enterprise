@@ -9,14 +9,14 @@ export class Draft {
       type: null,
       text: null,
       photo: null,
-      document: null
+      document: null,
     },
 
     editorial = null,
 
     createdAt = new Date().toISOString(),
 
-    updatedAt = new Date().toISOString()
+    updatedAt = new Date().toISOString(),
   }) {
     this.id = id;
     this.chatId = chatId;

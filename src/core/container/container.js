@@ -21,7 +21,7 @@ export class Container {
     this.#factories.set(token, {
       factory,
       instance: null,
-      initialized: false
+      initialized: false,
     });
 
     return this;

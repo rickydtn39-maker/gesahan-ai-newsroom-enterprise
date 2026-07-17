@@ -10,6 +10,6 @@ export function createDraft(chatId, userId) {
 
     userId,
 
-    state: WORKFLOW_STATE.WAITING_ARTICLE
+    state: WORKFLOW_STATE.WAITING_ARTICLE,
   });
 }

@@ -1,22 +1,12 @@
-export async function viewArticleCommand(
-  update,
-  telegramApi,
-  sessionManager
-) {
+export async function viewArticleCommand(update, telegramApi, sessionManager) {
   const draft = await sessionManager.get(update.chatId);
 
   if (!draft) {
-    return telegramApi.sendMessage(
-      update.chatId,
-      'Tidak ada draft aktif.'
-    );
+    return telegramApi.sendMessage(update.chatId, 'Tidak ada draft aktif.');
   }
 
   if (!draft.editorial) {
-    return telegramApi.sendMessage(
-      update.chatId,
-      'Artikel belum tersedia.'
-    );
+    return telegramApi.sendMessage(update.chatId, 'Artikel belum tersedia.');
   }
 
   const article = draft.editorial.article;
@@ -38,7 +28,7 @@ export async function viewArticleCommand(
       '',
       '📄 ARTIKEL',
       '',
-      article.content
+      article.content,
     ].join('\n')
   );
 }

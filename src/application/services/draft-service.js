@@ -7,9 +7,9 @@ export function attachSourceText(draft, text) {
     source: {
       ...draft.source,
       type: 'text',
-      text
+      text,
     },
 
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   });
 }

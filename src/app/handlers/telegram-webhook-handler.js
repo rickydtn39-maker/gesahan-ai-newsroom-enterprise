@@ -1,7 +1,4 @@
-import {
-  CONTENT_TYPE,
-  HTTP_STATUS
-} from '../../core/constants/index.js';
+import { CONTENT_TYPE, HTTP_STATUS } from '../../core/constants/index.js';
 import { TOKENS } from '../../core/container/index.js';
 
 import { createTelegramUpdate } from '../../application/dto/telegram-update.js';
@@ -13,15 +10,28 @@ export async function telegramWebhookHandler(request, context) {
 
   const telegramApi = context.container.resolve(TOKENS.TELEGRAM_API);
   const sessionManager = context.container.resolve(TOKENS.SESSION_MANAGER);
+  const logger = context.container.resolve(TOKENS.LOGGER);
+  const metrics = context.container.resolve(TOKENS.METRICS);
+
+  logger.info('Incoming Telegram Webhook', {
+    updateId: update.updateId,
+    chatId: update.chatId,
+    userId: update.userId,
+    hasText: update.hasText,
+    hasPhoto: update.hasPhoto,
+    hasDocument: update.hasDocument,
+  });
+
+  metrics.increment('webhook_received', 1, { source: 'telegram' });
 
   await dispatchTelegramUpdate(update, {
     telegramApi,
     sessionManager,
-    container: context.container
+    container: context.container,
   });
 
   return new Response(JSON.stringify({ ok: true }, null, 2), {
     status: HTTP_STATUS.OK,
-    headers: { 'content-type': CONTENT_TYPE.JSON }
+    headers: { 'content-type': CONTENT_TYPE.JSON },
   });
 }

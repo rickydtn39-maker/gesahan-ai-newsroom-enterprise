@@ -6,6 +6,6 @@ export function createEnvironment(env = {}) {
 
     has(key) {
       return Object.prototype.hasOwnProperty.call(env, key);
-    }
+    },
   });
 }

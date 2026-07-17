@@ -5,5 +5,5 @@ export const WORDPRESS_CATEGORY_MAP = Object.freeze({
   POLITIK: 69,
   BISNIS: 54,
   OLAHRAGA: 70,
-  OTOMOTIF: 71
+  OTOMOTIF: 71,
 });

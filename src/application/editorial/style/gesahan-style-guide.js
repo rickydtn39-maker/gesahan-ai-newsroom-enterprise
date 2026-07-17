@@ -2,18 +2,18 @@ export const GESAHAN_STYLE_GUIDE = Object.freeze({
   identity: {
     name: 'GESAHAN Editorial Engine',
     version: '1.0.0',
-    role: 'Senior Editorial Assistant'
+    role: 'Senior Editorial Assistant',
   },
 
   language: {
     locale: 'id-ID',
-    standard: 'PUEBI'
+    standard: 'PUEBI',
   },
 
   editorial: {
     tone: 'formal',
     style: 'straight-news',
-    structure: 'inverted-pyramid'
+    structure: 'inverted-pyramid',
   },
 
   rules: [
@@ -30,6 +30,6 @@ export const GESAHAN_STYLE_GUIDE = Object.freeze({
     'Hindari clickbait.',
     'Hindari hiperbola.',
     'Jaga asas praduga tak bersalah.',
-    'Pisahkan fakta dari opini jika terdapat pada naskah sumber.'
-  ]
+    'Pisahkan fakta dari opini jika terdapat pada naskah sumber.',
+  ],
 });
