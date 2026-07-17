@@ -1,15 +1,21 @@
+import {
+  APPLICATION,
+  CONTENT_TYPE,
+  HTTP_STATUS
+} from '../../core/constants/index.js';
+
 export async function bootstrap(_request, _env, _ctx) {
   const body = {
-    service: 'GESAHAN AI NEWSROOM ENTERPRISE',
-    version: '0.1.0',
+    service: APPLICATION.NAME,
+    version: APPLICATION.VERSION,
     status: 'healthy',
-    runtime: 'cloudflare-workers'
+    runtime: APPLICATION.RUNTIME
   };
 
   return new Response(JSON.stringify(body, null, 2), {
-    status: 200,
+    status: HTTP_STATUS.OK,
     headers: {
-      'content-type': 'application/json; charset=utf-8'
+      'content-type': CONTENT_TYPE.JSON
     }
   });
 }
