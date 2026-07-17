@@ -5,16 +5,19 @@ import {
 } from '../../core/constants/index.js';
 
 import { createConfiguration } from '../../core/config/index.js';
-
-import { createContainer } from '../../core/container/index.js';
-
+import { createContainer, TOKENS } from '../../core/container/index.js';
 import { AppError } from '../../core/errors/index.js';
 
 export async function bootstrap(_request, _env, _ctx) {
   try {
     const configuration = createConfiguration(_env);
-
     const container = createContainer(configuration);
+
+    const logger = container.resolve(TOKENS.LOGGER);
+
+    logger.info('Application bootstrap completed.', {
+      environment: configuration.application.environment
+    });
 
     const body = {
       service: APPLICATION.NAME,
@@ -23,8 +26,7 @@ export async function bootstrap(_request, _env, _ctx) {
       runtime: APPLICATION.RUNTIME,
       environment: configuration.application.environment,
       container: {
-        initialized: true,
-        services: 1
+        initialized: true
       }
     };
 
