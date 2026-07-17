@@ -1,25 +1,52 @@
 export class Container {
-  #services = new Map();
+  #instances = new Map();
 
-  register(token, instance) {
-    if (this.#services.has(token)) {
+  #factories = new Map();
+
+  registerInstance(token, instance) {
+    if (this.#instances.has(token) || this.#factories.has(token)) {
       throw new Error(`Service already registered: ${token}`);
     }
 
-    this.#services.set(token, instance);
+    this.#instances.set(token, instance);
+
+    return this;
+  }
+
+  registerFactory(token, factory) {
+    if (this.#instances.has(token) || this.#factories.has(token)) {
+      throw new Error(`Service already registered: ${token}`);
+    }
+
+    this.#factories.set(token, {
+      factory,
+      instance: null,
+      initialized: false
+    });
 
     return this;
   }
 
   resolve(token) {
-    if (!this.#services.has(token)) {
+    if (this.#instances.has(token)) {
+      return this.#instances.get(token);
+    }
+
+    const entry = this.#factories.get(token);
+
+    if (!entry) {
       throw new Error(`Service not found: ${token}`);
     }
 
-    return this.#services.get(token);
+    if (!entry.initialized) {
+      entry.instance = entry.factory(this);
+      entry.initialized = true;
+    }
+
+    return entry.instance;
   }
 
   has(token) {
-    return this.#services.has(token);
+    return this.#instances.has(token) || this.#factories.has(token);
   }
 }

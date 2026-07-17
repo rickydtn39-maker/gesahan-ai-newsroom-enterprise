@@ -1,9 +1,26 @@
 # Dependency Injection Container
 
-Container bertanggung jawab menyimpan seluruh dependency aplikasi.
+Container mendukung dua jenis registrasi.
 
-Aturan:
+1. registerInstance()
 
-- Jangan menggunakan new di business logic.
-- Semua dependency harus di-resolve melalui Container.
-- Seluruh provider didaftarkan saat bootstrap.
+Digunakan untuk objek yang sudah tersedia.
+
+Contoh:
+
+- configuration
+
+2. registerFactory()
+
+Digunakan untuk service yang dibuat saat pertama kali dipakai.
+
+Contoh:
+
+- logger
+- metrics
+- repository
+- provider
+
+Factory hanya dipanggil satu kali.
+
+Hasilnya disimpan sebagai singleton selama request berlangsung.
