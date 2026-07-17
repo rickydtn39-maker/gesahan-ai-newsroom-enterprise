@@ -4,19 +4,28 @@ import {
   HTTP_STATUS
 } from '../../core/constants/index.js';
 
-import { AppError } from '../../core/errors/index.js';
 import { createConfiguration } from '../../core/config/index.js';
+
+import { createContainer } from '../../core/container/index.js';
+
+import { AppError } from '../../core/errors/index.js';
 
 export async function bootstrap(_request, _env, _ctx) {
   try {
     const configuration = createConfiguration(_env);
+
+    const container = createContainer(configuration);
 
     const body = {
       service: APPLICATION.NAME,
       version: APPLICATION.VERSION,
       status: 'healthy',
       runtime: APPLICATION.RUNTIME,
-      environment: configuration.application.environment
+      environment: configuration.application.environment,
+      container: {
+        initialized: true,
+        services: 1
+      }
     };
 
     return new Response(JSON.stringify(body, null, 2), {
@@ -30,7 +39,8 @@ export async function bootstrap(_request, _env, _ctx) {
       error instanceof AppError
         ? error
         : new AppError({
-            message: 'Unexpected bootstrap error'
+            message: 'Unexpected bootstrap error',
+            cause: error
           });
 
     return new Response(
