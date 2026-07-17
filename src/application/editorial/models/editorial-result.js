@@ -1,22 +1,12 @@
 export class EditorialResult {
   constructor(data) {
-    this.title = data.title;
-    this.lead = data.lead;
-    this.content = data.content;
+    this.article = data.article;
 
-    this.slug = data.slug;
-    this.excerpt = data.excerpt;
+    this.seo = data.seo;
 
-    this.focusKeyword = data.focusKeyword;
-    this.metaDescription = data.metaDescription;
+    this.statistics = data.statistics;
 
-    this.category = data.category;
-    this.tags = data.tags ?? [];
-
-    this.readingTime = data.readingTime;
-    this.wordCount = data.wordCount;
-
-    this.qualityScore = data.qualityScore;
+    this.quality = data.quality;
 
     Object.freeze(this);
   }

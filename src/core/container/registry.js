@@ -1,14 +1,21 @@
 import { createLogger } from '../logger/index.js';
 
 import { DraftRepository } from '../../infrastructure/persistence/kv/index.js';
+
 import { TelegramApi } from '../../infrastructure/providers/telegram/index.js';
 import { GeminiProvider } from '../../infrastructure/providers/gemini/index.js';
+import { WordPressProvider } from '../../infrastructure/providers/wordpress/index.js';
 
 import { SessionManager } from '../../application/session/index.js';
+
 import {
   EditorialEngine,
   EditorialService
 } from '../../application/editorial/index.js';
+
+import {
+  PublishingService
+} from '../../application/publishing/index.js';
 
 import { Container } from './container.js';
 import { TOKENS } from './tokens.js';
@@ -33,9 +40,9 @@ export function createContainer(configuration, env) {
 
   container.registerFactory(
     TOKENS.SESSION_MANAGER,
-    (container) =>
+    (c) =>
       new SessionManager(
-        container.resolve(TOKENS.DRAFT_REPOSITORY)
+        c.resolve(TOKENS.DRAFT_REPOSITORY)
       )
   );
 
@@ -50,14 +57,17 @@ export function createContainer(configuration, env) {
 
   container.registerFactory(
     TOKENS.EDITORIAL_ENGINE,
-    () => new EditorialEngine()
+    (c) =>
+      new EditorialEngine(
+        c.resolve(TOKENS.AI_PROVIDER)
+      )
   );
 
   container.registerFactory(
     TOKENS.EDITORIAL_SERVICE,
-    (container) =>
+    (c) =>
       new EditorialService(
-        container.resolve(TOKENS.EDITORIAL_ENGINE)
+        c.resolve(TOKENS.EDITORIAL_ENGINE)
       )
   );
 
@@ -66,6 +76,21 @@ export function createContainer(configuration, env) {
     () =>
       new TelegramApi(
         configuration.telegram.botToken
+      )
+  );
+
+  container.registerFactory(
+    TOKENS.WORDPRESS_PROVIDER,
+    () =>
+      new WordPressProvider(configuration)
+  );
+
+  container.registerFactory(
+    TOKENS.PUBLISHING_SERVICE,
+    (c) =>
+      new PublishingService(
+        c.resolve(TOKENS.TELEGRAM_API),
+        c.resolve(TOKENS.WORDPRESS_PROVIDER)
       )
   );
 

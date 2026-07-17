@@ -1,28 +1,19 @@
 export class EditorialValidator {
   validate(result) {
-    const required = [
-      'title',
-      'lead',
-      'content',
-      'slug',
-      'excerpt',
-      'focusKeyword',
-      'metaDescription',
-      'category',
-      'tags',
-      'readingTime',
-      'wordCount',
-      'qualityScore'
-    ];
+    if (!result.article) {
+      throw new Error('Missing article.');
+    }
 
-    const missing = required.filter((field) => {
-      return result[field] === undefined || result[field] === null;
-    });
+    if (!result.seo) {
+      throw new Error('Missing seo.');
+    }
 
-    if (missing.length > 0) {
-      throw new Error(
-        `Editorial response is invalid. Missing fields: ${missing.join(', ')}`
-      );
+    if (!result.statistics) {
+      throw new Error('Missing statistics.');
+    }
+
+    if (!result.quality) {
+      throw new Error('Missing quality.');
     }
 
     return result;

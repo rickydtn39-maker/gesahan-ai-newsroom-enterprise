@@ -14,7 +14,8 @@
   },
 
   "vars": {
-    "GEMINI_MODEL": "gemini-2.5-flash"
+    "GEMINI_MODEL": "gemini-2.5-flash",
+	"WORDPRESS_ENDPOINT": "https://gesahannusantara.com"
   },
 
   "kv_namespaces": [

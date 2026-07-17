@@ -1,0 +1,9 @@
+export const WORDPRESS_CATEGORY_MAP = Object.freeze({
+  BERITA: 1,
+  NASIONAL: 28,
+  'HUKUM DAN KRIMINAL': 68,
+  POLITIK: 69,
+  BISNIS: 54,
+  OLAHRAGA: 70,
+  OTOMOTIF: 71
+});

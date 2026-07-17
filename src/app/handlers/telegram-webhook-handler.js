@@ -2,7 +2,6 @@ import {
   CONTENT_TYPE,
   HTTP_STATUS
 } from '../../core/constants/index.js';
-
 import { TOKENS } from '../../core/container/index.js';
 
 import { createTelegramUpdate } from '../../application/dto/telegram-update.js';
@@ -18,16 +17,11 @@ export async function telegramWebhookHandler(request, context) {
   await dispatchTelegramUpdate(update, {
     telegramApi,
     sessionManager,
-    context // Kita teruskan context agar command bisa resolve service lain
+    container: context.container
   });
 
-  return new Response(
-    JSON.stringify({ ok: true }, null, 2),
-    {
-      status: HTTP_STATUS.OK,
-      headers: {
-        'content-type': CONTENT_TYPE.JSON
-      }
-    }
-  );
+  return new Response(JSON.stringify({ ok: true }, null, 2), {
+    status: HTTP_STATUS.OK,
+    headers: { 'content-type': CONTENT_TYPE.JSON }
+  });
 }

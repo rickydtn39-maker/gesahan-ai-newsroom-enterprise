@@ -1,6 +1,8 @@
 export class TelegramApi {
   constructor(token) {
+    this.token = token;
     this.baseUrl = `https://api.telegram.org/bot${token}`;
+    this.fileBaseUrl = `https://api.telegram.org/file/bot${token}`;
   }
 
   async call(method, payload) {
@@ -16,11 +18,12 @@ export class TelegramApi {
 
     if (!response.ok || result.ok === false) {
       throw new Error(
-        `Telegram API error: ${result.description ?? response.status}`
+        result.description ??
+          `Telegram API ${response.status}`
       );
     }
 
-    return result;
+    return result.result;
   }
 
   async sendMessage(chatId, text, replyMarkup = null) {
@@ -36,13 +39,34 @@ export class TelegramApi {
     return this.call('sendMessage', payload);
   }
 
-  async setWebhook(url) {
-    return this.call('setWebhook', {
-      url
+  async getFile(fileId) {
+    return this.call('getFile', {
+      file_id: fileId
     });
   }
 
-  async deleteWebhook() {
-    return this.call('deleteWebhook', {});
+  async downloadFile(fileId) {
+    const file = await this.getFile(fileId);
+
+    const response = await fetch(
+      `${this.fileBaseUrl}/${file.file_path}`
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        'Failed to download Telegram file.'
+      );
+    }
+
+    return {
+      fileName:
+        file.file_path.split('/').pop(),
+
+      mimeType:
+        response.headers.get('content-type') ??
+        'application/octet-stream',
+
+      buffer: await response.arrayBuffer()
+    };
   }
 }

@@ -1,71 +1,116 @@
 export const EDITORIAL_RESPONSE_SCHEMA = Object.freeze({
   type: 'object',
 
+  required: [
+    'article',
+    'seo',
+    'statistics',
+    'quality'
+  ],
+
   properties: {
-    title: {
-      type: 'string'
-    },
+    article: {
+      type: 'object',
 
-    lead: {
-      type: 'string'
-    },
+      required: [
+        'title',
+        'lead',
+        'content'
+      ],
 
-    content: {
-      type: 'string'
-    },
+      properties: {
+        title: {
+          type: 'string'
+        },
 
-    slug: {
-      type: 'string'
-    },
+        lead: {
+          type: 'string'
+        },
 
-    excerpt: {
-      type: 'string'
-    },
-
-    focusKeyword: {
-      type: 'string'
-    },
-
-    metaDescription: {
-      type: 'string'
-    },
-
-    category: {
-      type: 'string'
-    },
-
-    tags: {
-      type: 'array',
-      items: {
-        type: 'string'
+        content: {
+          type: 'string'
+        }
       }
     },
 
-    readingTime: {
-      type: 'number'
+    seo: {
+      type: 'object',
+
+      required: [
+        'slug',
+        'focusKeyword',
+        'metaDescription',
+        'category',
+        'tags'
+      ],
+
+      properties: {
+        slug: {
+          type: 'string'
+        },
+
+        focusKeyword: {
+          type: 'string'
+        },
+
+        metaDescription: {
+          type: 'string'
+        },
+
+        category: {
+          type: 'string'
+        },
+
+        tags: {
+          type: 'array',
+
+          items: {
+            type: 'string'
+          }
+        }
+      }
     },
 
-    wordCount: {
-      type: 'number'
+    statistics: {
+      type: 'object',
+
+      required: [
+        'wordCount',
+        'readingTime'
+      ],
+
+      properties: {
+        wordCount: {
+          type: 'number'
+        },
+
+        readingTime: {
+          type: 'number'
+        }
+      }
     },
 
-    qualityScore: {
-      type: 'number'
+    quality: {
+      type: 'object',
+
+      required: [
+        'score',
+        'notes'
+      ],
+
+      properties: {
+        score: {
+          type: 'number'
+        },
+
+        notes: {
+          type: 'array',
+
+          items: {
+            type: 'string'
+          }
+        }
+      }
     }
-  },
-
-  required: [
-    'title',
-    'lead',
-    'content',
-    'slug',
-    'excerpt',
-    'focusKeyword',
-    'metaDescription',
-    'category',
-    'tags',
-    'readingTime',
-    'wordCount',
-    'qualityScore'
-  ]
+  }
 });

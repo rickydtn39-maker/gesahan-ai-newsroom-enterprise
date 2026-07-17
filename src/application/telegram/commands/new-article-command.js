@@ -13,7 +13,7 @@ export async function newArticleCommand(
       [
         '⚠️ Anda masih memiliki proses yang belum selesai.',
         '',
-        'Tekan ❌ Batal untuk membatalkan proses tersebut.'
+        'Tekan ❌ Batal jika ingin menghapus proses tersebut.'
       ].join('\n')
     );
   }

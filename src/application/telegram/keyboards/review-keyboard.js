@@ -3,12 +3,25 @@ export function createReviewKeyboard() {
     keyboard: [
       [
         {
+          text: '📄 Lihat Artikel Lengkap'
+        }
+      ],
+      [
+        {
+          text: '✏️ Edit Manual'
+        },
+        {
           text: '♻️ Rewrite Lagi'
         }
       ],
       [
         {
-          text: '✅ Publish'
+          text: '✅ Siap Publish'
+        }
+      ],
+      [
+        {
+          text: '📋 Status'
         },
         {
           text: '❌ Batal'

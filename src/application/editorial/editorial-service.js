@@ -9,17 +9,16 @@ export class EditorialService {
   }
 
   async generate(draft) {
-    const result =
-      await this.editorialEngine.process({
-        draft,
-        ai: {
-          model: 'gemini-2.5-flash',
-          schema: EDITORIAL_RESPONSE_SCHEMA
-        }
-      });
+    const result = await this.editorialEngine.process({
+      draft,
+      ai: {
+        model: 'gemini-2.5-flash',
+        schema: EDITORIAL_RESPONSE_SCHEMA
+      }
+    });
 
-    const validated = this.validator.validate(result);
-
-    return new EditorialResult(validated);
+    return new EditorialResult(
+      this.validator.validate(result)
+    );
   }
 }

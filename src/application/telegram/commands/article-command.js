@@ -9,7 +9,7 @@ export async function articleCommand(
   update,
   telegramApi,
   sessionManager,
-  context
+  container
 ) {
   let state = await sessionManager.getState(update.chatId);
 
@@ -26,61 +26,110 @@ export async function articleCommand(
   if (state !== WORKFLOW_STATE.WAITING_ARTICLE) {
     return telegramApi.sendMessage(
       update.chatId,
-      'Masih ada proses yang sedang berjalan. Gunakan 📋 Status atau ❌ Batal jika diperlukan.'
+      'Masih ada proses yang sedang berjalan.'
     );
   }
 
   if (!update.hasText) {
     return telegramApi.sendMessage(
       update.chatId,
-      [
-        'Untuk tahap ini saya menerima naskah dalam bentuk teks.',
-        '',
-        'Dukungan OCR untuk foto dan dokumen akan ditambahkan pada milestone berikutnya.'
-      ].join('\n')
+      'Silakan kirim berita dalam bentuk teks.'
     );
   }
 
   const draft = await sessionManager.get(update.chatId);
 
-  // 1. Simpan naskah asli
   const draftWithSource = attachSourceText(
     draft,
     update.text
   );
 
-  // 2. Kirim ke Editorial Service untuk diproses (saat ini masih statis)
-  const editorialService = context.container.resolve(TOKENS.EDITORIAL_SERVICE);
-  const editorialResult = await editorialService.generate(draftWithSource);
+  await sessionManager.save(draftWithSource);
 
-  // 3. Gabungkan hasil ke draft baru dan perbarui state menjadi WAITING_REVIEW
-  const updatedDraft = {
-    ...draftWithSource,
-    state: WORKFLOW_STATE.WAITING_REVIEW,
-    editorial: editorialResult,
-    updatedAt: new Date().toISOString()
-  };
+  try {
+    const editorialService =
+      container.resolve(
+        TOKENS.EDITORIAL_SERVICE
+      );
 
-  await sessionManager.save(updatedDraft);
+    const result =
+      await editorialService.generate(
+        draftWithSource
+      );
 
-  // 4. Kirim Preview ke Telegram
-  return telegramApi.sendMessage(
-    update.chatId,
-    [
-      '✅ Berita berhasil diolah oleh AI!',
-      '',
-      `📰 *JUDUL*`,
-      editorialResult.title,
-      '',
-      `📝 *LEAD*`,
-      editorialResult.lead,
-      '',
-      `📊 *STATISTIK*`,
-      `Jumlah Kata: ${editorialResult.wordCount}`,
-      `Estimasi Baca: ${editorialResult.readingTime} Menit`,
-      '',
-      'Silakan periksa draf di atas dan pilih tindakan di bawah.'
-    ].join('\n'),
-    createReviewKeyboard()
-  );
+    const updatedDraft = {
+      ...draftWithSource,
+
+      state: WORKFLOW_STATE.WAITING_REVIEW,
+
+      editorial: result,
+
+      updatedAt: new Date().toISOString()
+    };
+
+    await sessionManager.save(updatedDraft);
+
+    return telegramApi.sendMessage(
+      update.chatId,
+      [
+        '✅ AI berhasil menyusun artikel.',
+        '',
+        '━━━━━━━━━━━━━━━━━━',
+        '',
+        '📰 JUDUL',
+        '',
+        result.article.title,
+        '',
+        '━━━━━━━━━━━━━━━━━━',
+        '',
+        '📝 LEAD',
+        '',
+        result.article.lead,
+        '',
+        '━━━━━━━━━━━━━━━━━━',
+        '',
+        '🔍 SEO',
+        '',
+        `Slug : ${result.seo.slug}`,
+        `Keyword : ${result.seo.focusKeyword}`,
+        `Kategori : ${result.seo.category}`,
+        '',
+        '━━━━━━━━━━━━━━━━━━',
+        '',
+        '📊 STATISTIK',
+        '',
+        `Jumlah Kata : ${result.statistics.wordCount}`,
+        `Estimasi Baca : ${result.statistics.readingTime} menit`,
+        `Editorial Score : ${result.quality.score}/100`,
+        '',
+        '━━━━━━━━━━━━━━━━━━',
+        '',
+        '📋 CATATAN EDITOR',
+        '',
+        ...(result.quality.notes.length > 0
+          ? result.quality.notes.map(
+              (note) => `• ${note}`
+            )
+          : ['• Tidak ada catatan.']),
+        '',
+        '━━━━━━━━━━━━━━━━━━',
+        '',
+        '📄 Gunakan tombol "Lihat Artikel Lengkap" untuk membaca seluruh artikel.',
+        '',
+        'Silakan pilih tindakan berikut.'
+      ].join('\n'),
+      createReviewKeyboard()
+    );
+  } catch (error) {
+    return telegramApi.sendMessage(
+      update.chatId,
+      [
+        '⚠ AI tidak dapat memproses berita.',
+        '',
+        error.message,
+        '',
+        'Silakan coba kembali.'
+      ].join('\n')
+    );
+  }
 }
