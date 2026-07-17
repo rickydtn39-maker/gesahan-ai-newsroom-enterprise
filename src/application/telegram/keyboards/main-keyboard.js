@@ -3,15 +3,20 @@ export function createMainKeyboard() {
     keyboard: [
       [
         {
-          text: '🆕 Berita Baru'
+          text: '📰 Berita Baru'
+        }
+      ],
+      [
+        {
+          text: '📋 Status'
+        },
+        {
+          text: '❌ Batal'
         }
       ],
       [
         {
           text: 'ℹ️ Bantuan'
-        },
-        {
-          text: '❌ Batal'
         }
       ]
     ],

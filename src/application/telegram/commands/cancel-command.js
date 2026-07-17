@@ -1,9 +1,9 @@
 export async function cancelCommand(
   update,
   telegramApi,
-  draftRepository
+  sessionManager
 ) {
-  await draftRepository.remove(update.chatId);
+  await sessionManager.cancel(update.chatId);
 
   return telegramApi.sendMessage(
     update.chatId,

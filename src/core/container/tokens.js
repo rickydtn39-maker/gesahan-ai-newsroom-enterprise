@@ -5,11 +5,17 @@ export const TOKENS = Object.freeze({
 
   DRAFT_REPOSITORY: 'draft-repository',
 
+  SESSION_MANAGER: 'session-manager',
+
+  EDITORIAL_ENGINE: 'editorial-engine',
+
+  EDITORIAL_SERVICE: 'editorial-service',
+
+  AI_PROVIDER: 'ai-provider',
+
   TELEGRAM_API: 'telegram-api',
 
   METRICS: 'metrics',
-
-  GEMINI_PROVIDER: 'gemini-provider',
 
   OCR_PROVIDER: 'ocr-provider',
 

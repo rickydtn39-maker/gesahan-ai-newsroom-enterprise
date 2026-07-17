@@ -8,37 +8,21 @@ import { TOKENS } from '../../core/container/index.js';
 import { createTelegramUpdate } from '../../application/dto/telegram-update.js';
 import { dispatchTelegramUpdate } from '../../application/telegram/index.js';
 
-export async function telegramWebhookHandler(
-  request,
-  context
-) {
+export async function telegramWebhookHandler(request, context) {
   const payload = await request.json();
-
   const update = createTelegramUpdate(payload);
 
-  const telegramApi =
-    context.container.resolve(
-      TOKENS.TELEGRAM_API
-    );
-
-  const draftRepository =
-    context.container.resolve(
-      TOKENS.DRAFT_REPOSITORY
-    );
+  const telegramApi = context.container.resolve(TOKENS.TELEGRAM_API);
+  const sessionManager = context.container.resolve(TOKENS.SESSION_MANAGER);
 
   await dispatchTelegramUpdate(update, {
     telegramApi,
-    draftRepository
+    sessionManager,
+    context // Kita teruskan context agar command bisa resolve service lain
   });
 
   return new Response(
-    JSON.stringify(
-      {
-        ok: true
-      },
-      null,
-      2
-    ),
+    JSON.stringify({ ok: true }, null, 2),
     {
       status: HTTP_STATUS.OK,
       headers: {

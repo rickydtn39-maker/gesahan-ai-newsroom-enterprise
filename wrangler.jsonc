@@ -1,16 +1,26 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "gesahan-ai-newsroom-enterprise",
-	"main": "src/index.js",
-	"compatibility_date": "2026-07-17",
-	"workers_dev": true,
-	"observability": {
-		"enabled": true
-	},
-	"kv_namespaces": [
-		{
-			"binding": "GESAHAN_DRAFTS",
-			"id": "99a5f633cacf46249c139cd40bf2a7ec"
-		}
-	]
+  "$schema": "node_modules/wrangler/config-schema.json",
+
+  "name": "gesahan-ai-newsroom-enterprise",
+
+  "main": "src/index.js",
+
+  "compatibility_date": "2026-07-17",
+
+  "workers_dev": true,
+
+  "observability": {
+    "enabled": true
+  },
+
+  "vars": {
+    "GEMINI_MODEL": "gemini-2.5-flash"
+  },
+
+  "kv_namespaces": [
+    {
+      "binding": "GESAHAN_DRAFTS",
+      "id": "99a5f633cacf46249c139cd40bf2a7ec"
+    }
+  ]
 }

@@ -3,24 +3,26 @@ import { createDraft } from '../../services/editorial-session.js';
 export async function newArticleCommand(
   update,
   telegramApi,
-  draftRepository
+  sessionManager
 ) {
-  const existing = await draftRepository.findByChatId(update.chatId);
+  const state = await sessionManager.getState(update.chatId);
 
-  if (existing) {
+  if (state !== 'IDLE') {
     return telegramApi.sendMessage(
       update.chatId,
       [
-        '⚠️ Anda masih memiliki draft yang belum selesai.',
+        '⚠️ Anda masih memiliki proses yang belum selesai.',
         '',
-        'Ketik ❌ Batal jika ingin menghapus draft tersebut.'
+        'Tekan ❌ Batal untuk membatalkan proses tersebut.'
       ].join('\n')
     );
   }
 
-  const draft = createDraft(update.chatId, update.userId);
-
-  await draftRepository.save(draft);
+  await sessionManager.create(
+    update.chatId,
+    update.userId,
+    createDraft
+  );
 
   return telegramApi.sendMessage(
     update.chatId,
@@ -33,7 +35,9 @@ export async function newArticleCommand(
       '📷 Foto',
       '📄 Dokumen',
       '',
-      'Anda dapat membatalkan kapan saja dengan menekan ❌ Batal.'
+      'Saya akan mengolah berita menjadi artikel siap terbit.',
+      '',
+      'Tekan ❌ Batal kapan saja jika ingin membatalkan proses.'
     ].join('\n')
   );
 }
