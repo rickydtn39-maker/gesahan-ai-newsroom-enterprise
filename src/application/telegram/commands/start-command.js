@@ -1,28 +1,17 @@
+import { createMainKeyboard } from '../keyboards/index.js';
+
 export async function startCommand(update, telegramApi) {
   return telegramApi.sendMessage(
     update.chatId,
     [
       '👋 Selamat datang di GESAHAN AI NEWSROOM',
       '',
-      'Silakan pilih menu di bawah.',
+      'Saya adalah AI Editorial Assistant.',
       '',
-      '🆕 Berita Baru',
-      '❌ Batal'
+      'Saya akan membantu mengubah naskah menjadi artikel siap terbit dengan standar redaksi.',
+      '',
+      'Silakan pilih menu di bawah.'
     ].join('\n'),
-    {
-      keyboard: [
-        [
-          {
-            text: '🆕 Berita Baru'
-          }
-        ],
-        [
-          {
-            text: '❌ Batal'
-          }
-        ]
-      ],
-      resize_keyboard: true
-    }
+    createMainKeyboard()
   );
 }

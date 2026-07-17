@@ -1,17 +1,19 @@
 import { startCommand } from './commands/start-command.js';
 import { cancelCommand } from './commands/cancel-command.js';
+import { newArticleCommand } from './commands/new-article-command.js';
 
-export async function dispatchTelegramUpdate(
-  update,
-  services
-) {
+export async function dispatchTelegramUpdate(update, services) {
   const text = update.text ?? '';
 
   switch (text) {
     case '/start':
-      return startCommand(
+      return startCommand(update, services.telegramApi);
+
+    case '🆕 Berita Baru':
+      return newArticleCommand(
         update,
-        services.telegramApi
+        services.telegramApi,
+        services.draftRepository
       );
 
     case '/cancel':
@@ -25,7 +27,7 @@ export async function dispatchTelegramUpdate(
     default:
       return services.telegramApi.sendMessage(
         update.chatId,
-        'Perintah belum didukung. Ketik /start untuk memulai.'
+        'Perintah belum dikenali. Tekan /start untuk memulai.'
       );
   }
 }
