@@ -18,9 +18,9 @@ export class WordPressProvider {
       headers: {
         Authorization: this.authorization,
         'Content-Disposition': `attachment; filename="${fileName}"`,
-        'Content-Type': mimeType,
+        'Content-Type': mimeType
       },
-      body: buffer,
+      body: buffer
     });
 
     const payload = await response.json();
@@ -41,8 +41,8 @@ export class WordPressProvider {
           `${this.endpoint}/wp-json/wp/v2/tags?search=${encodeURIComponent(tag)}`,
           {
             headers: {
-              Authorization: this.authorization,
-            },
+              Authorization: this.authorization
+            }
           }
         );
 
@@ -57,11 +57,11 @@ export class WordPressProvider {
           method: 'POST',
           headers: {
             Authorization: this.authorization,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            name: tag,
-          }),
+            name: tag
+          })
         });
 
         if (created.ok) {
@@ -69,7 +69,6 @@ export class WordPressProvider {
           ids.push(createdPayload.id);
         }
       } catch (_error) {
-        // Abaikan jika 1 tag gagal, lanjutkan tag berikutnya agar publish tidak terhenti
         continue;
       }
     }
@@ -83,22 +82,34 @@ export class WordPressProvider {
     const categoryName = editorial.seo.category ? editorial.seo.category.toUpperCase() : 'BERITA';
     const categoryId = WORDPRESS_CATEGORY_MAP[categoryName] ?? 1;
 
+    // Premium Layout: Menjadikan lead tercetak tebal (bold) di awal artikel
+    const finalHtmlContent = `<strong>${editorial.article.lead}</strong>\n\n${editorial.article.content}`;
+
     const response = await fetch(`${this.endpoint}/wp-json/wp/v2/posts`, {
       method: 'POST',
       headers: {
         Authorization: this.authorization,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         title: editorial.article.title,
-        content: editorial.article.content,
+        content: finalHtmlContent,
         excerpt: editorial.article.lead,
         slug: editorial.seo.slug,
         featured_media: mediaId,
         categories: [categoryId],
         tags: tagIds,
         status: 'publish',
-      }),
+
+        // =========================================================================
+        // 🚀 INTEGRASI METADATA YOAST SEO (Otomatis Mengisi Yoast SEO)
+        // =========================================================================
+        meta: {
+          _yoast_wpseo_focuskw: editorial.seo.focusKeyword || '',
+          _yoast_wpseo_metadesc: editorial.seo.metaDescription || ''
+        }
+        // =========================================================================
+      })
     });
 
     const payload = await response.json();
