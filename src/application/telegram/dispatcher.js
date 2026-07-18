@@ -15,12 +15,26 @@ import { editCommand } from './commands/edit-command.js';
 import { manualEditSaveCommand } from './commands/manual-edit-save-command.js';
 import { ocrArticleCommand } from './commands/ocr-article-command.js';
 
-export async function dispatchTelegramUpdate(update, services) {
-  // 🛡️ SECURITY GUARD: WHITELIST CHECK
-  const config = services.container.resolve(TOKENS.CONFIGURATION);
-  const allowedUsers = config.telegram.allowedUsers;
+import { addUserCommand, delUserCommand, listUsersCommand } from './commands/admin-commands.js';
 
-  if (allowedUsers && allowedUsers.length > 0 && !allowedUsers.includes(Number(update.userId))) {
+export async function dispatchTelegramUpdate(update, services) {
+  const config = services.container.resolve(TOKENS.CONFIGURATION);
+  const whitelistRepo = services.container.resolve(TOKENS.WHITELIST_REPOSITORY);
+
+  // 1. Ambil whitelist dari Environment (Super Admins)
+  const allowedUsersEnv = config.telegram.allowedUsers || [];
+
+  // 2. Ambil whitelist dari Cloudflare KV Database (Dinamis)
+  const dynamicWhitelist = await whitelistRepo.getAll();
+  const allowedUsersKv = dynamicWhitelist.map((user) => Number(u => u.userId) || Number(user.userId));
+
+  const userId = Number(update.userId);
+
+  // Verifikasi Akses Dual-System
+  const isSuperAdmin = allowedUsersEnv.includes(userId);
+  const isAllowedUser = isSuperAdmin || allowedUsersKv.includes(userId);
+
+  if (!isAllowedUser && allowedUsersEnv.length > 0) {
     return services.telegramApi.sendMessage(
       update.chatId,
       '⛔ *AKSES DITOLAK*\n\nMaaf, ID Telegram Anda tidak terdaftar di sistem. Anda tidak memiliki izin untuk menggunakan GESAHAN AI Newsroom Enterprise.\n\nSilakan hubungi Administrator.'
@@ -29,25 +43,61 @@ export async function dispatchTelegramUpdate(update, services) {
 
   const text = update.text ?? '';
 
+  // =========================================================================
+  // 🛡️ GERBANG PERINTAH ADMIN (Hanya Super Admin/Environment yang bisa mengeksekusi)
+  // =========================================================================
+  if (isSuperAdmin) {
+    if (text.startsWith('/adduser')) {
+      return addUserCommand(update, services.telegramApi, whitelistRepo);
+    }
+    if (text.startsWith('/deluser')) {
+      return delUserCommand(update, services.telegramApi, whitelistRepo);
+    }
+    if (text === '/listusers') {
+      return listUsersCommand(update, services.telegramApi, whitelistRepo);
+    }
+  }
+  // =========================================================================
+
   switch (text) {
     case '/start':
       return startCommand(update, services.telegramApi);
 
     case '📰 Berita Baru':
     case '🆕 Berita Baru':
-      return newArticleCommand(update, services.telegramApi, services.sessionManager);
+      return newArticleCommand(
+        update,
+        services.telegramApi,
+        services.sessionManager
+      );
 
     case '📄 Lihat Artikel Lengkap':
-      return viewArticleCommand(update, services.telegramApi, services.sessionManager);
+      return viewArticleCommand(
+        update,
+        services.telegramApi,
+        services.sessionManager
+      );
 
     case '✏️ Edit Manual':
-      return editCommand(update, services.telegramApi, services.sessionManager);
+      return editCommand(
+        update,
+        services.telegramApi,
+        services.sessionManager
+      );
 
     case '📋 Status':
-      return statusCommand(update, services.telegramApi, services.sessionManager);
+      return statusCommand(
+        update,
+        services.telegramApi,
+        services.sessionManager
+      );
 
     case '✅ Siap Publish':
-      return readyPublishCommand(update, services.telegramApi, services.sessionManager);
+      return readyPublishCommand(
+        update,
+        services.telegramApi,
+        services.sessionManager
+      );
 
     case '🚀 Publish Sekarang':
       return publishNowCommand(
@@ -67,15 +117,25 @@ export async function dispatchTelegramUpdate(update, services) {
 
     case '/cancel':
     case '❌ Batal':
-      return cancelCommand(update, services.telegramApi, services.sessionManager);
+      return cancelCommand(
+        update,
+        services.telegramApi,
+        services.sessionManager
+      );
 
     default: {
       const draft = await services.sessionManager.get(update.chatId);
 
-      // Routing khusus jika pengguna mengirim foto/dokumen
       if (update.hasPhoto || update.hasDocument) {
-        if (draft?.state === WORKFLOW_STATE.WAITING_FEATURED_IMAGE && update.hasPhoto) {
-          return featuredImageCommand(update, services.telegramApi, services.sessionManager);
+        if (
+          draft?.state === WORKFLOW_STATE.WAITING_FEATURED_IMAGE &&
+          update.hasPhoto
+        ) {
+          return featuredImageCommand(
+            update,
+            services.telegramApi,
+            services.sessionManager
+          );
         }
 
         return ocrArticleCommand(
@@ -87,7 +147,11 @@ export async function dispatchTelegramUpdate(update, services) {
       }
 
       if (draft?.state === WORKFLOW_STATE.WAITING_MANUAL_EDIT) {
-        return manualEditSaveCommand(update, services.telegramApi, services.sessionManager);
+        return manualEditSaveCommand(
+          update,
+          services.telegramApi,
+          services.sessionManager
+        );
       }
 
       return articleCommand(

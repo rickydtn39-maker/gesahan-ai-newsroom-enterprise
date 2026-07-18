@@ -5,6 +5,8 @@ export const TOKENS = Object.freeze({
 
   DRAFT_REPOSITORY: 'draft-repository',
 
+  WHITELIST_REPOSITORY: 'whitelist-repository',
+
   SESSION_MANAGER: 'session-manager',
 
   EDITORIAL_ENGINE: 'editorial-engine',
@@ -23,5 +25,5 @@ export const TOKENS = Object.freeze({
 
   OCR_PROVIDER: 'ocr-provider',
 
-  SEO_PROVIDER: 'seo-provider',
+  SEO_PROVIDER: 'seo-provider'
 });

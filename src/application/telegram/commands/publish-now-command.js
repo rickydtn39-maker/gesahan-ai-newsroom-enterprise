@@ -1,11 +1,19 @@
 import { TOKENS } from '../../../core/container/index.js';
-import { attachPublishedResult } from '../../services/published-draft-service.js';
+import { createMainKeyboard } from '../keyboards/index.js';
 
-export async function publishNowCommand(update, telegramApi, sessionManager, container) {
+export async function publishNowCommand(
+  update,
+  telegramApi,
+  sessionManager,
+  container
+) {
   const draft = await sessionManager.get(update.chatId);
 
   if (!draft) {
-    return telegramApi.sendMessage(update.chatId, 'Draft tidak ditemukan.');
+    return telegramApi.sendMessage(
+      update.chatId,
+      'Draft tidak ditemukan.'
+    );
   }
 
   if (!draft.source?.featuredImage) {
@@ -24,18 +32,22 @@ export async function publishNowCommand(update, telegramApi, sessionManager, con
       '1. Mengunduh media resolusi tinggi',
       '2. Mengunggah ke WordPress',
       '3. Memproses Kategori & Tags',
-      '4. Menerbitkan artikel',
+      '4. Menerbitkan artikel'
     ].join('\n')
   );
 
   try {
-    const publishingService = container.resolve(TOKENS.PUBLISHING_SERVICE);
+    const publishingService = container.resolve(
+      TOKENS.PUBLISHING_SERVICE
+    );
 
     const published = await publishingService.publish(draft);
 
-    const completedDraft = attachPublishedResult(draft, published);
-
-    await sessionManager.save(completedDraft);
+    // =========================================================================
+    // 🧹 RESET SESSION: Hapus draf aktif dari KV agar status kembali bersih (IDLE)
+    // =========================================================================
+    await sessionManager.cancel(update.chatId);
+    // =========================================================================
 
     return telegramApi.sendMessage(
       update.chatId,
@@ -48,12 +60,19 @@ export async function publishNowCommand(update, telegramApi, sessionManager, con
         `🔗 URL : ${published.url}`,
         '',
         `🆔 WP ID : ${published.id}`,
-      ].join('\n')
+        '',
+        'Sesi aktif telah selesai. Silakan ketik berita baru atau tekan tombol di bawah untuk memulai kembali.'
+      ].join('\n'),
+      createMainKeyboard() // Memunculkan kembali Menu Utama secara otomatis
     );
   } catch (error) {
     return telegramApi.sendMessage(
       update.chatId,
-      ['❌ Publish gagal.', '', error.message].join('\n')
+      [
+        '❌ Publish gagal.',
+        '',
+        error.message
+      ].join('\n')
     );
   }
 }

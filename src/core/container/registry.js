@@ -1,7 +1,7 @@
 import { createLogger } from '../logger/index.js';
 import { MetricsService } from '../metrics/index.js';
 
-import { DraftRepository } from '../../infrastructure/persistence/kv/index.js';
+import { DraftRepository, WhitelistRepository } from '../../infrastructure/persistence/kv/index.js';
 
 import { TelegramApi } from '../../infrastructure/providers/telegram/index.js';
 import { GeminiProvider } from '../../infrastructure/providers/gemini/index.js';
@@ -10,7 +10,10 @@ import { GeminiOcrProvider } from '../../infrastructure/providers/ocr/index.js';
 
 import { SessionManager } from '../../application/session/index.js';
 
-import { EditorialEngine, EditorialService } from '../../application/editorial/index.js';
+import {
+  EditorialEngine,
+  EditorialService
+} from '../../application/editorial/index.js';
 
 import { PublishingService } from '../../application/publishing/index.js';
 
@@ -24,9 +27,20 @@ export function createContainer(configuration, env) {
 
   container.registerFactory(TOKENS.LOGGER, () => createLogger());
 
-  container.registerFactory(TOKENS.METRICS, (c) => new MetricsService(c.resolve(TOKENS.LOGGER)));
+  container.registerFactory(
+    TOKENS.METRICS,
+    (c) => new MetricsService(c.resolve(TOKENS.LOGGER))
+  );
 
-  container.registerFactory(TOKENS.DRAFT_REPOSITORY, () => new DraftRepository(env.GESAHAN_DRAFTS));
+  container.registerFactory(
+    TOKENS.DRAFT_REPOSITORY,
+    () => new DraftRepository(env.GESAHAN_DRAFTS)
+  );
+
+  container.registerFactory(
+    TOKENS.WHITELIST_REPOSITORY,
+    () => new WhitelistRepository(env.GESAHAN_DRAFTS)
+  );
 
   container.registerFactory(
     TOKENS.SESSION_MANAGER,
@@ -35,12 +49,20 @@ export function createContainer(configuration, env) {
 
   container.registerFactory(
     TOKENS.AI_PROVIDER,
-    () => new GeminiProvider(configuration.gemini.apiKey, configuration.gemini.model)
+    () =>
+      new GeminiProvider(
+        configuration.gemini.apiKey,
+        configuration.gemini.model
+      )
   );
 
   container.registerFactory(
     TOKENS.OCR_PROVIDER,
-    () => new GeminiOcrProvider(configuration.gemini.apiKey, configuration.gemini.model)
+    () =>
+      new GeminiOcrProvider(
+        configuration.gemini.apiKey,
+        configuration.gemini.model
+      )
   );
 
   container.registerFactory(
@@ -63,7 +85,10 @@ export function createContainer(configuration, env) {
     () => new TelegramApi(configuration.telegram.botToken)
   );
 
-  container.registerFactory(TOKENS.WORDPRESS_PROVIDER, () => new WordPressProvider(configuration));
+  container.registerFactory(
+    TOKENS.WORDPRESS_PROVIDER,
+    () => new WordPressProvider(configuration)
+  );
 
   container.registerFactory(
     TOKENS.PUBLISHING_SERVICE,

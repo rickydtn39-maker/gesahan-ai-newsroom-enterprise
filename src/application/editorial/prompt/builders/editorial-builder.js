@@ -23,19 +23,22 @@ ${guide.headline.rules.map((rule) => `- ${rule}`).join('\n')}
 ### 3. ATURAN PARAGRAF PEMBUKA & DATELINE (LOKASI AKTUAL)
 ${guide.lead.rules.map((rule) => `- ${rule}`).join('\n')}
 
-### 4. STRUKTUR & ALUR BACA (FLOW)
+### 4. GAYA NARASI KHAS GESAHAN (EDITORIAL VOICE)
+${guide.editorialVoice.rules.map((rule) => `- ${rule}`).join('\n')}
+
+### 5. STRUKTUR & ALUR BACA (FLOW)
 ${guide.flowAndStructure.rules.map((rule) => `- ${rule}`).join('\n')}
 
-### 5. DIKSI, TRANSISI & PANJANG KALIMAT
+### 6. DIKSI, TRANSISI & PANJANG KALIMAT
 ${guide.dictionAndSentences.rules.map((rule) => `- ${rule}`).join('\n')}
 
-### 6. TATA LETAK & KENYAMANAN BACA (CRITICAL!)
+### 7. TATA LETAK & KENYAMANAN BACA (CRITICAL!)
 ${guide.layout.rules.map((rule) => `- ${rule}`).join('\n')}
 
-### 7. ATURAN SEO
+### 8. ATURAN SEO
 ${guide.seo.rules.map((rule) => `- ${rule}`).join('\n')}
 
-### 8. KODE ETIK JURNALISTIK
+### 9. KODE ETIK JURNALISTIK
 ${guide.ethics.rules.map((rule) => `- ${rule}`).join('\n')}
 
 ================================================
