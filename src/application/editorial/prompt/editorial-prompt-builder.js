@@ -1,15 +1,15 @@
-import { PromptFactory } from './prompt-factory.js';
+import { EditorialBuilder } from './builders/editorial-builder.js';
 
 export class EditorialPromptBuilder {
   constructor() {
-    this.factory = new PromptFactory();
+    this.editorialBuilder = new EditorialBuilder();
   }
 
   buildGeminiPass(job) {
-    return this.factory.editorialBuilder.buildGeminiPass(job);
+    return this.editorialBuilder.buildGeminiPass(job);
   }
 
   buildChatGptPass(job, geminiResult) {
-    return this.factory.editorialBuilder.buildChatGptPass(job, geminiResult);
+    return this.editorialBuilder.buildChatGptPass(job, geminiResult);
   }
 }

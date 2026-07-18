@@ -10,8 +10,8 @@ function slugify(text) {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '-')               // Ganti spasi dengan tanda hubung -
-    .replace(/[^\w\-]+/g, '')           // Bersihkan semua karakter selain huruf, angka, dan tanda hubung
-    .replace(/\-\-+/g, '-')             // Satukan tanda hubung yang berturut-turut (misal: "---" menjadi "-")
+    .replace(/[^\w-]+/g, '')            // Bersihkan semua karakter selain huruf, angka, dan tanda hubung (Tanpa escape '-')
+    .replace(/--+/g, '-')               // Satukan tanda hubung yang berturut-turut (Tanpa escape '-')
     .replace(/^-+/, '')                 // Hapus tanda hubung di awal string
     .replace(/-+$/, '');                // Hapus tanda hubung di akhir string
 }

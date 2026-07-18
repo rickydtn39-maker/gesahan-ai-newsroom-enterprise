@@ -1,11 +1,10 @@
 export class OpenAiProvider {
   constructor(apiKey, model) {
     this.apiKey = apiKey;
-    this.model = model || 'gpt-5';
+    this.model = model || 'gpt-4o';
   }
 
   async generate(request) {
-    // Jalur gratis menggunakan API GitHub Models
     const url = 'https://models.inference.ai.azure.com/chat/completions';
 
     const response = await fetch(url, {
@@ -35,8 +34,16 @@ export class OpenAiProvider {
     }
 
     const content = payload?.choices?.[0]?.message?.content ?? '';
+    
+    // Fungsi utilitas untuk membersihkan markdown backticks jika tidak sengaja dihasilkan oleh LLM
+    const cleanContent = content
+      .replace(/^```json/i, '')
+      .replace(/^```/i, '')
+      .replace(/```$/i, '')
+      .trim();
+
     try {
-      return JSON.parse(content);
+      return JSON.parse(cleanContent);
     } catch (error) {
       throw new Error('Gagal mengurai format JSON dari GitHub Models.', { cause: error });
     }
