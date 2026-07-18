@@ -18,7 +18,7 @@ export function loadConfiguration(environment) {
 
     gemini: {
       apiKey: environment.get('GEMINI_API_KEY') ?? null,
-      model: environment.get('GEMINI_MODEL') ?? 'gemini-2.5-flash'
+      model: environment.get('GEMINI_MODEL') ?? 'gemini-1.5-flash'
     },
 
     openai: {

@@ -26,7 +26,7 @@ export async function dispatchTelegramUpdate(update, services) {
 
   // 2. Ambil whitelist dari Cloudflare KV Database (Dinamis)
   const dynamicWhitelist = await whitelistRepo.getAll();
-  const allowedUsersKv = dynamicWhitelist.map((user) => Number(u => u.userId) || Number(user.userId));
+  const allowedUsersKv = dynamicWhitelist.map((user) => Number(user.userId));
 
   const userId = Number(update.userId);
 

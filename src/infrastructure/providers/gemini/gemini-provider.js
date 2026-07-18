@@ -4,41 +4,54 @@ export class GeminiProvider extends AiProvider {
   constructor(apiKey, model) {
     super();
     this.apiKey = apiKey;
-    // Default menggunakan Gemini-2.5-Pro jika tidak ada konfigurasi di wrangler
-    this.model = model || 'Gemini-2.5-Pro';
+    // Default menggunakan gemini-1.5-pro jika tidak ada konfigurasi di wrangler
+    this.model = model || 'gemini-1.5-pro';
   }
 
   async generate(request) {
-    // Reroute ke endpoint stabil GitHub Models
-    const url = 'https://models.inference.ai.azure.com/chat/completions';
+    // Memastikan nama model selalu lowercase untuk Google API resmi
+    const modelName = this.model.toLowerCase();
+    
+    // REST API Endpoint STABIL resmi Google AI Studio
+    const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${this.apiKey}`;
+
+    const body = {
+      contents: [
+        {
+          parts: [
+            {
+              text: request.prompt
+            }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.2
+      }
+    };
+
+    // Jika skema validasi disediakan, setel ke format JSON dengan skema dari Google
+    if (request.schema) {
+      body.generationConfig.responseMimeType = 'application/json';
+      body.generationConfig.responseSchema = request.schema;
+    }
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model: this.model,
-        messages: [
-          {
-            role: 'user',
-            content: request.prompt
-          }
-        ],
-        temperature: 0.2,
-        response_format: request.schema ? { type: 'json_object' } : undefined
-      })
+      body: JSON.stringify(body)
     });
 
     const payload = await response.json();
 
     if (!response.ok) {
       const msg = payload?.error?.message || `HTTP ${response.status}`;
-      throw new Error(`Stage 1 Gemini (GitHub Models) error (${response.status}): ${msg}`);
+      throw new Error(`Stage 1 Gemini (Google AI Studio) error (${response.status}): ${msg}`);
     }
 
-    const content = payload?.choices?.[0]?.message?.content ?? '';
+    const content = payload?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
     
     const cleanContent = content
       .replace(/^```json/i, '')
@@ -49,7 +62,7 @@ export class GeminiProvider extends AiProvider {
     try {
       return JSON.parse(cleanContent);
     } catch (error) {
-      throw new Error('Gagal mengurai format JSON dari Ingest Engine.', { cause: error });
+      throw new Error('Gagal mengurai format JSON dari Google AI Studio.', { cause: error });
     }
   }
 }

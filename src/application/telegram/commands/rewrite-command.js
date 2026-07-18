@@ -26,8 +26,8 @@ export async function rewriteCommand(update, telegramApi, sessionManager, contai
   try {
     const editorialService = container.resolve(TOKENS.EDITORIAL_SERVICE);
 
-    // Menjalankan ulang AI berdasarkan naskah asli (draft.source) yang tersimpan di memori
-    const result = await editorialService.generate(draft);
+    // Menjalankan ulang AI berdasarkan naskah asli (draft.source) dan data stage 1 yang tersimpan di memori
+    const result = await editorialService.generate(draft, draft.stage1);
 
     const updatedDraft = {
       ...draft,
