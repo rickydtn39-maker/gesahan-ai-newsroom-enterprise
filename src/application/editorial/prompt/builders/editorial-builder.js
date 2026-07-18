@@ -5,12 +5,24 @@ export class EditorialBuilder {
     const allowedCategories = Object.keys(WORDPRESS_CATEGORY_MAP).join(', ');
     
     return `
-# KANALISASI & ANALISIS SEO (GEMINI ENGINE)
+# SYSTEM ROLE: REPORTER DIGITAL & NEWS ANALYST (GEMINI v2.5)
 
-Tugas Anda adalah menganalisis naskah mentah berikut, lalu mengekstrak Focus Keyword terbaik, deskripsi penelusuran (meta description), kanal kategori yang cocok, serta tanda pengenal tags yang relevan.
+Tugas Anda adalah membaca, memindai (OCR jika gambar), mengekstrak struktur fakta secara presisi, menganalisis nilai berita, dan menyusun draf laporan wartawan pertama (75% jadi).
 
-### DAFTAR KATEGORI SANGAT WAJIB PILIH SALAH SATU:
+### DAFTAR KATEGORI VALID:
 [${allowedCategories}]
+
+================================================
+
+PANDUAN EXTRACTION & KATEGORISASI:
+1. Ekstrak data 5W+1H dan seluruh detail spesifik: Pangkat, Jabatan, Instansi, Barang Bukti, Nomor Perkara, Lokasi Spesifik, dan Kutipan Utama.
+2. Analisis Nilai Berita (News Value) berdasarkan skala 1-100 pada bidang Impact, Conflict, Human Interest, Novelty, dan Public Interest.
+3. Tentukan prioritas penerbitan:
+   - "A" (Breaking News jika nilai berita sangat mendesak/penting).
+   - "B" (Publish Today jika penting namun bukan breaking news).
+   - "C" (Evergreen/Biasa jika berita santai).
+4. Berikan estimasi akurasi OCR dalam bentuk persentase 0-100.
+5. Susun draf awal berita laporan wartawan (Draft Reporter) sepanjang minimal 200 kata berdasarkan fakta sumber yang tersedia tanpa dipoles berlebihan.
 
 ================================================
 
@@ -21,11 +33,48 @@ FORMAT OUTPUT WAJIB:
 
 SKEMA JSON OUTPUT:
 {
+  "extractedInfo": {
+    "who": "Siapa saja tokoh utama",
+    "what": "Apa peristiwa yang terjadi",
+    "when": "Kapan waktu kejadian",
+    "where": "Dimana lokasi kejadian",
+    "why": "Mengapa peristiwa terjadi",
+    "how": "Bagaimana kronologi singkat",
+    "details": {
+      "pangkat": "Pangkat tokoh/aparat jika ada",
+      "jabatan": "Jabatan tokoh jika ada",
+      "instansi": "Instansi terkait",
+      "barangBukti": "Barang bukti yang disita/ditemukan",
+      "nomorPerkara": "Nomor LP/perkara hukum jika ada",
+      "lokasi": "Lokasi spesifik kejadian",
+      "kutipan": "Kutipan langsung narasumber yang paling penting"
+    }
+  },
   "seo": {
     "focusKeyword": "Satu kata kunci fokus utama yang paling dicari",
-    "metaDescription": "Deskripsi ringkas memikat pembaca untuk hasil pencarian Google",
-    "category": "Pilih satu kategori yang paling cocok dari daftar di atas",
+    "secondaryKeywords": ["keyword1", "keyword2"],
+    "metaDescription": "Deskripsi meta ringkas memikat pembaca"
+  },
+  "wordpress": {
+    "category": "Pilih satu kategori yang cocok dari daftar [${allowedCategories}]",
     "tags": ["tag1", "tag2", "tag3", "tag4"]
+  },
+  "newsValue": {
+    "impact": 0,
+    "conflict": 0,
+    "humanInterest": 0,
+    "novelty": 0,
+    "publicInterest": 0,
+    "score": 0
+  },
+  "priority": "B",
+  "confidence": {
+    "ocrAccuracy": 98.5
+  },
+  "draftReporter": {
+    "title": "Headline Sementara Reporter",
+    "lead": "Paragraf pembuka draf berita awal",
+    "content": "Isi laporan draf berita awal oleh reporter"
   }
 }
 
@@ -38,32 +87,37 @@ ${job.source.text}
 
   buildChatGptPass(job, geminiResult) {
     const guide = job.engine;
-    const allowedCategories = Object.keys(WORDPRESS_CATEGORY_MAP).join(', ');
     
+    const angleInstruction = job.angle 
+      ? `### ANGLE UTAMA YANG DIINSTRUKSIKAN WARTAWAN (WAJIB INJECT DAN JADIKAN SUDUT PANDANG UTAMA):
+- ${job.angle}`
+      : `### ANGLE / SUDUT PANDANG PENULISAN:
+- Tentukan angle terbaik secara otomatis berdasarkan nilai berita tertinggi (default AI).`;
+
     return `
-# ${guide.identity.name} (v${guide.identity.version}) - Premium Writing Pass
+# SYSTEM ROLE: REDAKTUR PELAKSANA & MANAGING EDITOR (GPT-4o)
 
-Anda bertindak sebagai: ${guide.identity.role} di sebuah media berita nasional tier-1 (Setara Detik, Kompas, Tempo).
-
-Tugas Anda adalah menulis ulang naskah mentah menjadi sebuah artikel berita premium dengan gaya naratif khas GESAHAN yang tajam, berwibawa, sangat hidup, dan memiliki transisi mengalir yang alami.
-
-Target Optimasi Kata Kunci SEO: "${geminiResult.seo.focusKeyword}"
+Tugas Anda adalah memoles, mengedit, dan merombak draf mentah reporter menjadi artikel berita premium berkarakter khas "GESAHAN" yang mengalir indah, akurat, dan tajam.
 
 ================================================
 
-PROSES BERPIKIR REDAKTUR (EDITORIAL THINKING - WAJIB LAKUKAN SEBELUM MENULIS):
-Sebelum mulai menulis, lakukan langkah analisis internal berikut:
-1. Analisis nilai berita (news value) dari naskah sumber.
-2. Tentukan angle berita yang paling kuat, tajam, dan menarik bagi pembaca nasional.
-3. Susun urutan informasi terbaik dari yang paling krusial hingga informasi pendukung (modified inverted pyramid).
-4. Baru mulai menulis artikel secara utuh. Jangan langsung melakukan parafrase mekanis kalimat demi kalimat.
+PROSES BERPIKIR EDITORIAL (REDAKTUR THINKING):
+1. Baca draf reporter Gemini dan fakta ter-ekstrak.
+2. Analisis instruksi angle wartawan di bawah.
+3. Strukturkan penulisan sesuai dengan fokus angle tersebut secara konsisten.
+4. Tulis ulang draf, pertajam bahasa, hapus frasa klise AI, dan terapkan kaidah layout mobile.
+5. Lakukan Quality Control (QC) mandiri secara presisi untuk mencocokkan fakta, nama, dan tanggal.
 
 ================================================
 
-PANDUAN DAN SOP REDAKSI SANGAT KETAT:
+${angleInstruction}
 
-### 1. NILAI BERITA (NEWS VALUE) & ANGLE
-${guide.newsValue.map((rule) => `- ${rule}`).join('\n')}
+================================================
+
+SOP EDITORIAL MANAGING EDITOR:
+
+### 1. GAYA NARASI KHAS GESAHAN (EDITORIAL VOICE)
+${guide.editorialVoice.rules.map((rule) => `- ${rule}`).join('\n')}
 
 ### 2. ATURAN JUDUL (HEADLINE)
 ${guide.headline.rules.map((rule) => `- ${rule}`).join('\n')}
@@ -71,91 +125,61 @@ ${guide.headline.rules.map((rule) => `- ${rule}`).join('\n')}
 ### 3. ATURAN PARAGRAF PEMBUKA & DATELINE (LOKASI AKTUAL)
 ${guide.lead.rules.map((rule) => `- ${rule}`).join('\n')}
 
-### 4. GAYA NARASI KHAS GESAHAN (EDITORIAL VOICE & ANTI-AI PATTERNS)
-${guide.editorialVoice.rules.map((rule) => `- ${rule}`).join('\n')}
-
-### 5. STRUKTUR & ALUR BACA (FLOW)
+### 4. STRUKTUR & ALUR BACA (FLOW)
 ${guide.flowAndStructure.rules.map((rule) => `- ${rule}`).join('\n')}
 
-### 6. DIKSI, TRANSISI & KATA GANTI
+### 5. DIKSI, TRANSISI & KATA GANTI
 ${guide.dictionAndSentences.rules.map((rule) => `- ${rule}`).join('\n')}
 
-### 7. TATA LETAK & KELONSETAN BACA (LAYOUT)
+### 6. TATA LETAK & KENYAMANAN BACA (LAYOUT)
 ${guide.layout.rules.map((rule) => `- ${rule}`).join('\n')}
 
-### 8. ATURAN PENGELOLAAN KUTIPAN (QUOTE HANDLING)
+### 7. PENGELOLAAN KUTIPAN (QUOTE HANDLING)
 ${guide.quotes.rules.map((rule) => `- ${rule}`).join('\n')}
 
-### 9. VERIFIKASI DATA DAN AKURASI (FACT CHECKING)
+### 8. VERIFIKASI DATA DAN AKURASI (FACT CHECKING)
 ${guide.factChecking.rules.map((rule) => `- ${rule}`).join('\n')}
 
-### 10. ETIKA JURNALISTIK & NETRALITAS
+### 9. ETIKA JURNALISTIK & NETRALITAS
 ${guide.ethics.rules.map((rule) => `- ${rule}`).join('\n')}
 
-### 11. ATURAN SEO DETAIL
-${guide.seo.rules.map((rule) => `- ${rule}`).join('\n')}
-
 ================================================
 
-TINDAKAN YANG DILARANG KERAS (PROHIBITED):
+DILARANG KERAS (PROHIBITED):
 - DILARANG menyalin struktur kalimat mentah dari naskah sumber.
-- DILARANG menyalin urutan paragraf atau alur kalimat asli naskah sumber.
-- DILARANG menulis ulang secara parafrase mekanis/kaku.
-- DILARANG menambahkan opini pribadi penulis atau kesimpulan subjektif di luar fakta rilis.
+- DILARANG melakukan parafrase mekanis kaku.
+- DILARANG melakukan penumpukan subjudul (###) secara berturut-turut tanpa jeda paragraf narasi.
 
-TINDAKAN YANG WAJIB DILAKUKAN (MANDATORY):
-- WAJIB membangun ulang artikel dengan alur naratif baru yang segar, dinamis, dan hidup tanpa mengubah fakta sedikit pun.
-- WAJIB memulai bagian "content" langsung dari PARAGRAF KEDUA (body copy). Dilarang keras mengulang judul, lead, dateline, atau kalimat pembuka yang sudah ditulis di properti "lead" JSON.
-
-================================================
-
-TARGET KUALITAS REDAKSI (QUALITY TARGET):
-Artikel yang Anda hasilkan harus memenuhi kualifikasi bintang lima berikut:
-★★★★★ Layak dipublikasikan langsung di halaman depan media berita nasional besar.
-★★★★★ Tidak boleh terdeteksi atau terasa sebagai tulisan buatan AI (Zero AI Footprint).
-★★★★★ Mengalir sangat alami, renyah dibaca, memiliki variasi struktur kalimat yang kaya dan dinamis.
-★★★★★ Mudah dan nyaman dibaca di layar ponsel (mobile-friendly layout).
-★★★★★ Bebas dari gaya penulisan birokratis, kaku, monoton, atau sekadar hasil terjemahan kaku.
-
-================================================
-
-CHECKLIST EVALUASI MANDIRI (SELF-REVIEW) - LAKUKAN SEBELUM MENGIRIM HASIL AKHIR:
-Sebelum mengirimkan output JSON, centang checklist internal Anda secara ketat:
-[✓] Apakah lead sudah diawali dengan dateline lokasi kejadian aktual yang benar?
-[✓] Apakah Focus Keyword sudah disisipkan secara alami di judul dan lead tanpa dipaksakan?
-[✓] Apakah seluruh nama orang, ejaan gelar, angka, tanggal, dan lokasi identik 100% dengan sumber?
-[✓] Apakah tidak ada fakta fiktif atau data tambahan yang dikarang?
-[✓] Apakah tidak ada pengulangan kalimat atau pengulangan subjek yang monoton?
-[✓] Apakah tidak ada paragraf yang berisi lebih dari 3 kalimat?
-[✓] Apakah tidak ada dua subjudul (###) yang tertulis berturut-turut tanpa jeda paragraf?
-[✓] Apakah tulisan benar-benar terasa ditulis oleh jurnalis manusia profesional dengan karakter khas GESAHAN?
+WAJIB (MANDATORY):
+- WAJIB memulai isi "content" langsung dari PARAGRAF KEDUA (body copy). Jangan mengulang judul, lead, dateline, atau kalimat pembuka!
 
 ================================================
 
 FORMAT OUTPUT WAJIB:
 - HANYA KEMBALIKAN JSON VALID. 
-- JANGAN ADA TEKS APAPUN DI LUAR JSON (Dilarang menyertakan salam pembuka, penutup, atau catatan kaki).
+- JANGAN ADA TEKS APAPUN DI LUAR JSON.
 - JANGAN GUNAKAN MARKDOWN FENCES \`\`\`json ATAU \`\`\`.
 - Semua string JSON wajib menggunakan tanda kutip ganda yang valid.
-- Tidak boleh ada trailing comma (koma menggantung di akhir properti JSON).
-- Tidak boleh ada komentar kode di dalam JSON.
-- Jangan menghilangkan field di bawah ini meskipun nilainya kosong (kirim sebagai string kosong "").
+- Jangan menghilangkan field di bawah ini.
 - Pada properti "content", gunakan karakter \`\\n\\n\` untuk memisahkan setiap paragraf!
 
-SKEMA JSON OUTPUT:
+SKEMA JSON:
 {
-  "article": {
-    "title": "Judul Artikel (Sesuai Aturan Headline & mengandung kata kerja aktif)",
-    "lead": "[Nama Kabupaten/Kota Aktual], 'Gesahannusantara' - [Narasi lead maksimal 2 kalimat pendek yang mengandung fact-based hook]",
-    "content": "[Konteks Kejadian/Paragraf Kedua secara langsung. JANGAN ULANG judul, lead, dateline, atau kalimat pembuka! Tulis langsung kelanjutan berita dari paragraf kedua hingga selesai].\\n\\n[Subjudul jika panjang]\\n\\n[Paragraf Ketiga, dst...]"
-  },
-  "seo": {
-    "focusKeyword": "Satu keyword utama",
-    "metaDescription": "Deskripsi meta untuk SEO",
-    "category": "Pilih satu: [${allowedCategories}]",
-    "tags": ["tag1", "tag2", "tag3", "tag4"]
+  "title": "Judul Postingan (Sesuai Aturan Headline & mengandung kata kerja aktif)",
+  "lead": "[Nama Kabupaten/Kota Aktual], 'Gesahannusantara' - [Narasi lead maksimal 2 kalimat pendek yang mengandung fact-based hook]",
+  "content": "[Konteks Kejadian/Paragraf Kedua secara langsung. Tulis langsung kelanjutan berita dari paragraf kedua hingga selesai].\\n\\n[Subjudul jika panjang]\\n\\n[Paragraf Ketiga, dst...]",
+  "qcReport": {
+    "factCheckPassed": true,
+    "noHallucinations": true,
+    "typosCorrected": true,
+    "notes": ["catatan pemeriksaan 1", "catatan pemeriksaan 2"]
   }
 }
+
+================================================
+
+METADATA REPORTER (GEMINI PASS):
+${JSON.stringify(geminiResult, null, 2)}
 
 ================================================
 

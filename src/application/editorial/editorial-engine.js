@@ -8,37 +8,23 @@ export class EditorialEngine {
     this.promptBuilder = new EditorialPromptBuilder();
   }
 
-  async process(request) {
-    const job = createEditorialJob(request.draft);
-
-    // FASE 1: Gemini melakukan Analisis SEO & Kategori
+  async processStage1(draft) {
+    const job = createEditorialJob(draft);
     const geminiPrompt = this.promptBuilder.buildGeminiPass(job);
-    const geminiResult = await this.aiProvider.generate({
-      model: request.ai.model,
+    
+    return this.aiProvider.generate({
       prompt: geminiPrompt,
-      schema: request.ai.schema
+      schema: true
     });
+  }
 
-    // FASE 2: GPT-4o menulis Prosa Jurnalistik Premium GESAHAN
-    const chatGptPrompt = this.promptBuilder.buildChatGptPass(job, geminiResult);
-    const chatGptResult = await this.openaiProvider.generate({
+  async processStage3(draft, stage1Result) {
+    const job = createEditorialJob(draft);
+    const chatGptPrompt = this.promptBuilder.buildChatGptPass(job, stage1Result);
+    
+    return this.openaiProvider.generate({
       prompt: chatGptPrompt,
       schema: true
     });
-
-    // Penggabungan hasil akhir secara utuh
-    return {
-      article: {
-        title: chatGptResult.title,
-        lead: chatGptResult.lead,
-        content: chatGptResult.content
-      },
-      seo: {
-        focusKeyword: geminiResult.seo.focusKeyword,
-        metaDescription: geminiResult.seo.metaDescription,
-        category: geminiResult.seo.category,
-        tags: geminiResult.seo.tags
-      }
-    };
   }
 }
