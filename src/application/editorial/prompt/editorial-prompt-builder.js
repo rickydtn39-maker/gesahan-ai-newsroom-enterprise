@@ -5,7 +5,11 @@ export class EditorialPromptBuilder {
     this.factory = new PromptFactory();
   }
 
-  build(job) {
-    return this.factory.editorial(job);
+  buildGeminiPass(job) {
+    return this.factory.editorialBuilder.buildGeminiPass(job);
+  }
+
+  buildChatGptPass(job, geminiResult) {
+    return this.factory.editorialBuilder.buildChatGptPass(job, geminiResult);
   }
 }

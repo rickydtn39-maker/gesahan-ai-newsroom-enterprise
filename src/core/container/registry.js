@@ -5,6 +5,7 @@ import { DraftRepository, WhitelistRepository } from '../../infrastructure/persi
 
 import { TelegramApi } from '../../infrastructure/providers/telegram/index.js';
 import { GeminiProvider } from '../../infrastructure/providers/gemini/index.js';
+import { OpenAiProvider } from '../../infrastructure/providers/openai/index.js';
 import { WordPressProvider } from '../../infrastructure/providers/wordpress/index.js';
 import { GeminiOcrProvider } from '../../infrastructure/providers/ocr/index.js';
 
@@ -57,6 +58,15 @@ export function createContainer(configuration, env) {
   );
 
   container.registerFactory(
+    TOKENS.OPENAI_PROVIDER,
+    () =>
+      new OpenAiProvider(
+        configuration.openai.apiKey,
+        configuration.openai.model
+      )
+  );
+
+  container.registerFactory(
     TOKENS.OCR_PROVIDER,
     () =>
       new GeminiOcrProvider(
@@ -67,7 +77,11 @@ export function createContainer(configuration, env) {
 
   container.registerFactory(
     TOKENS.EDITORIAL_ENGINE,
-    (c) => new EditorialEngine(c.resolve(TOKENS.AI_PROVIDER))
+    (c) =>
+      new EditorialEngine(
+        c.resolve(TOKENS.AI_PROVIDER),
+        c.resolve(TOKENS.OPENAI_PROVIDER)
+      )
   );
 
   container.registerFactory(

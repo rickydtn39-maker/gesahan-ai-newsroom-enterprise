@@ -17,6 +17,8 @@ export const TOKENS = Object.freeze({
 
   AI_PROVIDER: 'ai-provider',
 
+  OPENAI_PROVIDER: 'openai-provider',
+
   TELEGRAM_API: 'telegram-api',
 
   WORDPRESS_PROVIDER: 'wordpress-provider',

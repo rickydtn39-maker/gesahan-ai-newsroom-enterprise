@@ -10,18 +10,19 @@
   "workers_dev": true,
 
   "observability": {
-    "enabled": true,
+    "enabled": true
   },
 
   "vars": {
     "GEMINI_MODEL": "gemini-2.5-flash",
-    "WORDPRESS_ENDPOINT": "https://gesahannusantara.com",
+    "OPENAI_MODEL": "gpt-5", 
+    "WORDPRESS_ENDPOINT": "https://gesahannusantara.com"
   },
 
   "kv_namespaces": [
     {
       "binding": "GESAHAN_DRAFTS",
-      "id": "99a5f633cacf46249c139cd40bf2a7ec",
-    },
-  ],
+      "id": "99a5f633cacf46249c139cd40bf2a7ec"
+    }
+  ]
 }
