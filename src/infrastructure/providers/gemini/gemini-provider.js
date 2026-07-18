@@ -1,73 +1,55 @@
 import { AiProvider } from '../../../application/ports/ai-provider.js';
-import { GeminiResponse } from './dto/gemini-response.js';
-import { GeminiMapper } from './gemini-mapper.js';
 
 export class GeminiProvider extends AiProvider {
   constructor(apiKey, model) {
     super();
     this.apiKey = apiKey;
-    this.model = model || 'gemini-2.5-flash';
-    this.mapper = new GeminiMapper();
-    this.timeout = 30000;
+    // Default menggunakan Gemini-2.5-Pro jika tidak ada konfigurasi di wrangler
+    this.model = model || 'Gemini-2.5-Pro';
   }
 
   async generate(request) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`;
+    // Reroute ke endpoint stabil GitHub Models
+    const url = 'https://models.inference.ai.azure.com/chat/completions';
 
-    let lastError;
-
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Goog-Api-Key': this.apiKey,
-          },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: request.prompt }] }],
-            generationConfig: {
-              temperature: 0.2,
-              topP: 0.95,
-              maxOutputTokens: 8192,
-              responseMimeType: 'application/json',
-              responseSchema: request.schema,
-            },
-          }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        const payload = await response.json();
-
-        if (!response.ok) {
-          const msg = payload?.error?.message || `HTTP ${response.status}`;
-          if (response.status === 429 || response.status >= 500) {
-            lastError = new Error(`Gemini retryable: ${msg}`);
-            if (attempt === 1) {
-              await new Promise((r) => setTimeout(r, 1000));
-              continue;
-            }
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`
+      },
+      body: JSON.stringify({
+        model: this.model,
+        messages: [
+          {
+            role: 'user',
+            content: request.prompt
           }
-          throw new Error(`Gemini error (${response.status}): ${msg}`);
-        }
+        ],
+        temperature: 0.2,
+        response_format: request.schema ? { type: 'json_object' } : undefined
+      })
+    });
 
-        const geminiResponse = new GeminiResponse(payload);
-        return this.mapper.map(geminiResponse.getText());
-      } catch (error) {
-        clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-          // Menambahkan cause: error agar linter bahagia
-          throw new Error('Gemini timeout after 30s.', { cause: error });
-        }
-        throw error;
-      }
+    const payload = await response.json();
+
+    if (!response.ok) {
+      const msg = payload?.error?.message || `HTTP ${response.status}`;
+      throw new Error(`Stage 1 Gemini (GitHub Models) error (${response.status}): ${msg}`);
     }
 
-    throw lastError || new Error('Gemini failed after retries.');
+    const content = payload?.choices?.[0]?.message?.content ?? '';
+    
+    const cleanContent = content
+      .replace(/^```json/i, '')
+      .replace(/^```/i, '')
+      .replace(/```$/i, '')
+      .trim();
+
+    try {
+      return JSON.parse(cleanContent);
+    } catch (error) {
+      throw new Error('Gagal mengurai format JSON dari Ingest Engine.', { cause: error });
+    }
   }
 }

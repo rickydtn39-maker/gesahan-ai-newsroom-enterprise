@@ -1,5 +1,6 @@
 import { createEditorialJob } from './dto/editorial-job.js';
 import { EditorialPromptBuilder } from './prompt/editorial-prompt-builder.js';
+import { GEMINI_INGEST_SCHEMA } from './schema/editorial-response-schema.js';
 
 export class EditorialEngine {
   constructor(aiProvider, openaiProvider) {
@@ -12,9 +13,10 @@ export class EditorialEngine {
     const job = createEditorialJob(draft);
     const geminiPrompt = this.promptBuilder.buildGeminiPass(job);
     
+    // Mengirimkan objek GEMINI_INGEST_SCHEMA secara utuh ke Gemini, bukan boolean true
     return this.aiProvider.generate({
       prompt: geminiPrompt,
-      schema: true
+      schema: GEMINI_INGEST_SCHEMA
     });
   }
 
@@ -22,6 +24,7 @@ export class EditorialEngine {
     const job = createEditorialJob(draft);
     const chatGptPrompt = this.promptBuilder.buildChatGptPass(job, stage1Result);
     
+    // OpenAI hanya membutuhkan boolean true untuk memicu mode response_format json_object
     return this.openaiProvider.generate({
       prompt: chatGptPrompt,
       schema: true

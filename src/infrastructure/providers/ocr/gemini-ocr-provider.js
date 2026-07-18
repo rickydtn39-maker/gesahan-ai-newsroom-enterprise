@@ -1,11 +1,12 @@
 export class GeminiOcrProvider {
   constructor(apiKey, model) {
     this.apiKey = apiKey;
-    this.model = model || 'gemini-2.5-flash';
+    this.model = model || 'Gemini-2.5-Pro';
   }
 
   async extractText(buffer, mimeType) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`;
+    // Reroute ke endpoint stabil GitHub Models
+    const url = 'https://models.inference.ai.azure.com/chat/completions';
 
     // Konversi ArrayBuffer ke Base64
     const uint8 = new Uint8Array(buffer);
@@ -22,38 +23,38 @@ export class GeminiOcrProvider {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Goog-Api-Key': this.apiKey,
+        'Authorization': `Bearer ${this.apiKey}`
       },
       body: JSON.stringify({
-        contents: [
+        model: this.model,
+        messages: [
           {
-            parts: [
+            role: 'user',
+            content: [
               {
-                inlineData: {
-                  mimeType: mimeType || 'image/jpeg',
-                  data: base64Data,
-                },
+                type: 'text',
+                text: prompt
               },
               {
-                text: prompt,
-              },
-            ],
-          },
-        ],
-      }),
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mimeType || 'image/jpeg'};base64,${base64Data}`
+                }
+              }
+            ]
+          }
+        ]
+      })
     });
 
     const payload = await response.json();
 
     if (!response.ok) {
       const msg = payload?.error?.message || `HTTP ${response.status}`;
-      throw new Error(`OCR Processing Error (${response.status}): ${msg}`);
+      throw new Error(`Gemini OCR (GitHub Models) Error (${response.status}): ${msg}`);
     }
 
-    const extractedText =
-      payload?.candidates?.[0]?.content?.[0]?.text ??
-      payload?.candidates?.[0]?.content?.parts?.[0]?.text ??
-      '';
+    const extractedText = payload?.choices?.[0]?.message?.content ?? '';
 
     if (!extractedText.trim()) {
       throw new Error(
