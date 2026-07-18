@@ -3,17 +3,14 @@ import { AiProvider } from '../../../application/ports/ai-provider.js';
 export class GeminiProvider extends AiProvider {
   constructor(apiKey, model) {
     super();
+
     this.apiKey = apiKey;
-    // Default menggunakan gemini-1.5-pro jika tidak ada konfigurasi di wrangler
-    this.model = model || 'gemini-1.5-pro';
+    this.model = (model || 'gemini-2.5-flash').toLowerCase();
   }
 
   async generate(request) {
-    // Memastikan nama model selalu lowercase untuk Google API resmi
-    const modelName = this.model.toLowerCase();
-    
-    // REST API Endpoint STABIL resmi Google AI Studio
-    const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${this.apiKey}`;
+    const url =
+      `https://generativelanguage.googleapis.com/v1/models/${this.model}:generateContent?key=${this.apiKey}`;
 
     const body = {
       contents: [
@@ -30,12 +27,6 @@ export class GeminiProvider extends AiProvider {
       }
     };
 
-    // Jika skema validasi disediakan, setel ke format JSON dengan skema dari Google
-    if (request.schema) {
-      body.generationConfig.responseMimeType = 'application/json';
-      body.generationConfig.responseSchema = request.schema;
-    }
-
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -47,22 +38,32 @@ export class GeminiProvider extends AiProvider {
     const payload = await response.json();
 
     if (!response.ok) {
-      const msg = payload?.error?.message || `HTTP ${response.status}`;
-      throw new Error(`Stage 1 Gemini (Google AI Studio) error (${response.status}): ${msg}`);
+      throw new Error(
+        `Stage 1 Gemini (${response.status}): ${
+          payload?.error?.message || 'Unknown error'
+        }`
+      );
     }
 
-    const content = payload?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    
-    const cleanContent = content
+    const text =
+      payload?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+
+    if (!text) {
+      throw new Error('Gemini tidak mengembalikan output.');
+    }
+
+    const cleaned = text
       .replace(/^```json/i, '')
       .replace(/^```/i, '')
       .replace(/```$/i, '')
       .trim();
 
     try {
-      return JSON.parse(cleanContent);
-    } catch (error) {
-      throw new Error('Gagal mengurai format JSON dari Google AI Studio.', { cause: error });
+      return JSON.parse(cleaned);
+    } catch {
+      throw new Error(
+        'Output Gemini bukan JSON yang valid.\n\n' + cleaned
+      );
     }
   }
 }

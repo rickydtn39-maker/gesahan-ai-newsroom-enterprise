@@ -12,6 +12,8 @@ export function createEditorialJob(draft) {
 
     source: draft.source,
 
+    angle: draft.angle ?? null,
+
     options: {
       protectFacts: true,
       protectNames: true,

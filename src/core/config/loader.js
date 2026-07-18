@@ -1,5 +1,6 @@
 export function loadConfiguration(environment) {
   const allowedUsersRaw = environment.get('ALLOWED_USERS') ?? '';
+
   const allowedUsers = allowedUsersRaw
     .split(',')
     .map((id) => id.trim())
@@ -13,12 +14,12 @@ export function loadConfiguration(environment) {
 
     telegram: {
       botToken: environment.get('TELEGRAM_BOT_TOKEN') ?? null,
-      allowedUsers: allowedUsers
+      allowedUsers
     },
 
     gemini: {
       apiKey: environment.get('GEMINI_API_KEY') ?? null,
-      model: environment.get('GEMINI_MODEL') ?? 'gemini-1.5-flash'
+      model: environment.get('GEMINI_MODEL') ?? 'gemini-2.5-flash'
     },
 
     openai: {

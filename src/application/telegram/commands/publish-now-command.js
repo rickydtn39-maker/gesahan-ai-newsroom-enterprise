@@ -38,11 +38,12 @@ export async function publishNowCommand(
     const totalDuration = Date.now() - new Date(draft.createdAt).getTime();
 
     // =========================================================================
-    // 📊 STAGE 6: POST-PUBLISH ANALYTICS LOG (Structured JSON)
+    // 📊 STAGE 6: POST-PUBLISH ANALYTICS LOG (Guaranteed Data Schema)
     // =========================================================================
     const logger = container.resolve(TOKENS.LOGGER);
     const metrics = container.resolve(TOKENS.METRICS);
 
+    // Kita sekarang bisa mengakses draft.stage1 secara langsung dan percaya diri
     const analyticsLog = {
       event: 'POST_PUBLISH_ANALYTICS',
       articleId: published.id,

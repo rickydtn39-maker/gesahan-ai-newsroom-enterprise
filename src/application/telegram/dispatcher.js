@@ -14,6 +14,7 @@ import { viewArticleCommand } from './commands/view-article-command.js';
 import { editCommand } from './commands/edit-command.js';
 import { manualEditSaveCommand } from './commands/manual-edit-save-command.js';
 import { ocrArticleCommand } from './commands/ocr-article-command.js';
+import { angleSaveCommand } from './commands/angle-save-command.js';
 
 import { addUserCommand, delUserCommand, listUsersCommand } from './commands/admin-commands.js';
 
@@ -151,6 +152,15 @@ export async function dispatchTelegramUpdate(update, services) {
           update,
           services.telegramApi,
           services.sessionManager
+        );
+      }
+
+      if (draft?.state === WORKFLOW_STATE.WAITING_ANGLE) {
+        return angleSaveCommand(
+          update,
+          services.telegramApi,
+          services.sessionManager,
+          services.container
         );
       }
 
