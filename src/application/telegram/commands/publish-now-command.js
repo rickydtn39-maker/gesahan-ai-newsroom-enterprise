@@ -1,12 +1,7 @@
 import { TOKENS } from '../../../core/container/index.js';
 import { createMainKeyboard } from '../keyboards/index.js';
 
-export async function publishNowCommand(
-  update,
-  telegramApi,
-  sessionManager,
-  container
-) {
+export async function publishNowCommand(update, telegramApi, sessionManager, container) {
   const draft = await sessionManager.get(update.chatId);
 
   if (!draft) {
@@ -14,7 +9,10 @@ export async function publishNowCommand(
   }
 
   if (!draft.source?.featuredImage) {
-    return telegramApi.sendMessage(update.chatId, '❌ Foto unggulan wajib dikirim terlebih dahulu.');
+    return telegramApi.sendMessage(
+      update.chatId,
+      '❌ Foto unggulan wajib dikirim terlebih dahulu.'
+    );
   }
 
   await telegramApi.sendMessage(
@@ -24,7 +22,7 @@ export async function publishNowCommand(
       '1. Mengunduh media resolusi tinggi dari Telegram',
       '2. Mempublikasikan ke WordPress',
       '3. Menyuntikkan meta Yoast SEO',
-      '4. Merekam log analitik newsroom'
+      '4. Merekam log analitik newsroom',
     ].join('\n')
   );
 
@@ -56,9 +54,9 @@ export async function publishNowCommand(
       wordCount: draft.editorial.statistics.wordCount,
       durationMs: {
         publishing: publishDuration,
-        totalWorkflow: totalDuration
+        totalWorkflow: totalDuration,
       },
-      publishedAt: new Date().toISOString()
+      publishedAt: new Date().toISOString(),
     };
 
     logger.info('Publishing process successfully completed.', analyticsLog);
@@ -68,7 +66,7 @@ export async function publishNowCommand(
     // 🧠 STAGE 7: EDITORIAL MEMORY SYSTEM (Follow-up Story Linker)
     // =========================================================================
     const draftRepo = container.resolve(TOKENS.DRAFT_REPOSITORY);
-    
+
     // Simpan draf saat ini ke riwayat memori KV sebelum dihapus dari sesi aktif
     const archivedKey = `newsroom:memory:${published.id}`;
     await draftRepo.storage.put(archivedKey, {
@@ -77,7 +75,7 @@ export async function publishNowCommand(
       category: draft.editorial.seo.category,
       keyword: draft.editorial.seo.focusKeyword,
       url: published.url,
-      publishedAt: new Date().toISOString()
+      publishedAt: new Date().toISOString(),
     });
 
     // Reset status sesi aktif di Telegram menjadi IDLE
@@ -99,11 +97,10 @@ export async function publishNowCommand(
         '',
         `🆔 *WP Post ID:* \`${published.id}\``,
         '━━━━━━━━━━━━━━━━━━',
-        'Sesi draf ini telah ditutup dengan aman. Silakan ketik berita baru untuk memulai.'
+        'Sesi draf ini telah ditutup dengan aman. Silakan ketik berita baru untuk memulai.',
       ].join('\n'),
       createMainKeyboard()
     );
-
   } catch (error) {
     return telegramApi.sendMessage(
       update.chatId,

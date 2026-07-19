@@ -9,35 +9,35 @@ export function loadConfiguration(environment) {
 
   return Object.freeze({
     application: {
-      environment: environment.get('APP_ENV') ?? 'development'
+      environment: environment.get('APP_ENV') ?? 'development',
     },
 
     telegram: {
       botToken: environment.get('TELEGRAM_BOT_TOKEN') ?? null,
-      allowedUsers
+      webhookSecretToken: environment.get('TELEGRAM_SECRET_TOKEN') ?? null, // 🚀 SECURE TELEGRAM WEBHOOK TOKEN
+      allowedUsers,
     },
 
     gemini: {
       apiKey: environment.get('GEMINI_API_KEY') ?? null,
-      model: environment.get('GEMINI_MODEL') ?? 'gemini-2.5-flash'
+      model: environment.get('GEMINI_MODEL') ?? 'gemini-2.5-flash',
     },
 
     openai: {
       apiKey: environment.get('OPENAI_API_KEY') ?? null,
-      model: environment.get('OPENAI_MODEL') ?? 'gpt-4o'
+      model: environment.get('OPENAI_MODEL') ?? 'gpt-4o',
     },
 
     wordpress: {
       endpoint: environment.get('WORDPRESS_ENDPOINT') ?? null,
       username: environment.get('WORDPRESS_USERNAME') ?? null,
-      applicationPassword:
-        environment.get('WORDPRESS_APPLICATION_PASSWORD') ?? null
+      applicationPassword: environment.get('WORDPRESS_APPLICATION_PASSWORD') ?? null,
     },
 
     seo: {
       sitemapUrl: environment.get('SITEMAP_URL') ?? null,
       rssUrl: environment.get('RSS_URL') ?? null,
-      indexNowKey: environment.get('INDEXNOW_KEY') ?? null
-    }
+      indexNowKey: environment.get('INDEXNOW_KEY') ?? null,
+    },
   });
 }

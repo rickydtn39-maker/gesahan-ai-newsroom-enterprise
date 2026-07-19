@@ -10,8 +10,8 @@ export class EditorialBuilder {
 
   buildChatGptPass(job, geminiResult) {
     const guide = job.engine;
-    
-    const angleInstruction = job.angle 
+
+    const angleInstruction = job.angle
       ? `### ANGLE UTAMA YANG DIINSTRUKSIKAN WARTAWAN (WAJIB INJECT DAN JADIKAN SUDUT PANDANG UTAMA):\n- ${job.angle}`
       : `### ANGLE / SUDUT PANDANG PENULISAN:\n- Tentukan angle terbaik secara otomatis berdasarkan nilai berita tertinggi (default AI).`;
 

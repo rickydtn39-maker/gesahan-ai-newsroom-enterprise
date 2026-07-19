@@ -17,7 +17,11 @@ export default [
         clearTimeout: 'readonly',
         fetch: 'readonly',
         btoa: 'readonly',
+        atob: 'readonly',
         Uint8Array: 'readonly',
+        TextEncoder: 'readonly',
+        TextDecoder: 'readonly',
+        URLSearchParams: 'readonly',
       },
     },
     rules: {
@@ -27,7 +31,7 @@ export default [
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
-          caughtErrorsIgnorePattern: '^_', // Menambahkan ini agar _error diabaikan
+          caughtErrorsIgnorePattern: '^_',
         },
       ],
     },

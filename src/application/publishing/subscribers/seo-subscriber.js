@@ -14,7 +14,7 @@ export function registerSeoSubscriber(container) {
       await Promise.all([
         seoProvider.submitToIndexNow(articleUrl),
         seoProvider.pingSitemap(),
-        seoProvider.pingRssFeed()
+        seoProvider.pingRssFeed(),
       ]);
       logger.info('SEO indexing and pings completed successfully', { articleUrl });
     } catch (error) {

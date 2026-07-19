@@ -29,5 +29,5 @@ export const TOKENS = Object.freeze({
 
   SEO_PROVIDER: 'seo-provider',
 
-  EVENT_BUS: 'event-bus' // 🚀 NEW: Token untuk Event Bus Engine
+  EVENT_BUS: 'event-bus', // 🚀 NEW: Token untuk Event Bus Engine
 });

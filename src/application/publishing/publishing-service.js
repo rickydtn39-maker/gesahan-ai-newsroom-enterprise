@@ -27,15 +27,15 @@ export class PublishingService {
       if (userCredentials && userCredentials.wpUsername && userCredentials.wpAppPassword) {
         customAuth = {
           username: userCredentials.wpUsername,
-          applicationPassword: userCredentials.wpAppPassword
+          applicationPassword: userCredentials.wpAppPassword,
         };
         this.logger.info('Using custom author credentials for WordPress publishing', {
           userId: draft.userId,
-          wpUsername: userCredentials.wpUsername
+          wpUsername: userCredentials.wpUsername,
         });
       } else {
         this.logger.info('Falling back to global WordPress Admin credentials', {
-          userId: draft.userId
+          userId: draft.userId,
         });
       }
 
@@ -60,10 +60,12 @@ export class PublishingService {
           articleUrl,
           postId: post.id,
           draftId: draft.id,
-          editorial: draft.editorial
+          editorial: draft.editorial,
         });
       } catch (eventError) {
-        this.logger.error('Error triggering ARTICLE_PUBLISHED event subscribers', { error: eventError.message });
+        this.logger.error('Error triggering ARTICLE_PUBLISHED event subscribers', {
+          error: eventError.message,
+        });
       }
 
       const duration = Date.now() - startTime;

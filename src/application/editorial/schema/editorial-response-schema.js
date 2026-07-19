@@ -7,7 +7,7 @@ export const GEMINI_INGEST_SCHEMA = Object.freeze({
     'newsValue',
     'priority',
     'confidence',
-    'draftReporter'
+    'draftReporter',
   ],
   properties: {
     extractedInfo: {
@@ -22,7 +22,15 @@ export const GEMINI_INGEST_SCHEMA = Object.freeze({
         how: { type: 'string' },
         details: {
           type: 'object',
-          required: ['pangkat', 'jabatan', 'instansi', 'barangBukti', 'nomorPerkara', 'lokasi', 'kutipan'],
+          required: [
+            'pangkat',
+            'jabatan',
+            'instansi',
+            'barangBukti',
+            'nomorPerkara',
+            'lokasi',
+            'kutipan',
+          ],
           properties: {
             pangkat: { type: 'string' },
             jabatan: { type: 'string' },
@@ -30,10 +38,10 @@ export const GEMINI_INGEST_SCHEMA = Object.freeze({
             barangBukti: { type: 'string' },
             nomorPerkara: { type: 'string' },
             lokasi: { type: 'string' },
-            kutipan: { type: 'string' }
-          }
-        }
-      }
+            kutipan: { type: 'string' },
+          },
+        },
+      },
     },
     seo: {
       type: 'object',
@@ -41,16 +49,16 @@ export const GEMINI_INGEST_SCHEMA = Object.freeze({
       properties: {
         focusKeyword: { type: 'string' },
         secondaryKeywords: { type: 'array', items: { type: 'string' } },
-        metaDescription: { type: 'string' }
-      }
+        metaDescription: { type: 'string' },
+      },
     },
     wordpress: {
       type: 'object',
       required: ['category', 'tags'],
       properties: {
         category: { type: 'string' },
-        tags: { type: 'array', items: { type: 'string' } }
-      }
+        tags: { type: 'array', items: { type: 'string' } },
+      },
     },
     newsValue: {
       type: 'object',
@@ -61,19 +69,19 @@ export const GEMINI_INGEST_SCHEMA = Object.freeze({
         humanInterest: { type: 'number' },
         novelty: { type: 'number' },
         publicInterest: { type: 'number' },
-        score: { type: 'number' }
-      }
+        score: { type: 'number' },
+      },
     },
     priority: {
       type: 'string',
-      enum: ['A', 'B', 'C']
+      enum: ['A', 'B', 'C'],
     },
     confidence: {
       type: 'object',
       required: ['ocrAccuracy'],
       properties: {
-        ocrAccuracy: { type: 'number' }
-      }
+        ocrAccuracy: { type: 'number' },
+      },
     },
     draftReporter: {
       type: 'object',
@@ -81,10 +89,10 @@ export const GEMINI_INGEST_SCHEMA = Object.freeze({
       properties: {
         title: { type: 'string' },
         lead: { type: 'string' },
-        content: { type: 'string' }
-      }
-    }
-  }
+        content: { type: 'string' },
+      },
+    },
+  },
 });
 
 export const GPT_EDITORIAL_SCHEMA = Object.freeze({
@@ -101,8 +109,8 @@ export const GPT_EDITORIAL_SCHEMA = Object.freeze({
         factCheckPassed: { type: 'boolean' },
         noHallucinations: { type: 'boolean' },
         typosCorrected: { type: 'boolean' },
-        notes: { type: 'array', items: { type: 'string' } }
-      }
-    }
-  }
+        notes: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  },
 });

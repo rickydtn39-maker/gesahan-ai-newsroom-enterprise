@@ -1,5 +1,3 @@
-import { WORDPRESS_CATEGORY_MAP } from '../../../infrastructure/providers/wordpress/category-map.js';
-
 export class EditorialValidator {
   validateIngest(result) {
     if (!result) throw new Error('Ingest Engine output is null.');
@@ -19,12 +17,6 @@ export class EditorialValidator {
     if (!result.lead) throw new Error('Missing "lead" in GPT-4o output.');
     if (!result.content) throw new Error('Missing "content" in GPT-4o output.');
     if (!result.qcReport) throw new Error('Missing "qcReport" in GPT-4o output.');
-
-    const categoryUpper = result.seoCategory ? result.seoCategory.toUpperCase() : '';
-    if (categoryUpper && !Object.prototype.hasOwnProperty.call(WORDPRESS_CATEGORY_MAP, categoryUpper)) {
-      throw new Error(`Category "${result.seoCategory}" is not whitelisted.`);
-    }
-
     return result;
   }
 }

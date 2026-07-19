@@ -4,12 +4,7 @@ import { createDraft } from '../../services/editorial-session.js';
 import { attachSourceText } from '../../services/draft-service.js';
 import { createAngleKeyboard } from '../keyboards/index.js';
 
-export async function ocrArticleCommand(
-  update,
-  telegramApi,
-  sessionManager,
-  container
-) {
+export async function ocrArticleCommand(update, telegramApi, sessionManager, container) {
   let state = await sessionManager.getState(update.chatId);
 
   if (state === WORKFLOW_STATE.IDLE) {
@@ -26,7 +21,10 @@ export async function ocrArticleCommand(
     return telegramApi.sendMessage(update.chatId, 'File foto atau dokumen tidak valid.');
   }
 
-  await telegramApi.sendMessage(update.chatId, '🔍 [STAGE 1] Gemini Reporter sedang mengunduh media dan mengekstrak teks (OCR)...');
+  await telegramApi.sendMessage(
+    update.chatId,
+    '🔍 [STAGE 1] Gemini Reporter sedang mengunduh media dan mengekstrak teks (OCR)...'
+  );
 
   try {
     const downloadedFile = await telegramApi.downloadFile(fileId);
@@ -56,12 +54,16 @@ export async function ocrArticleCommand(
       ...draftWithSource,
       state: WORKFLOW_STATE.WAITING_ANGLE,
       stage1: stage1Result,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     await sessionManager.save(updatedDraft);
 
-    const priorityIcons = { A: '🔴 [A - BREAKING NEWS]', B: '🟡 [B - PUBLISH TODAY]', C: '🟢 [C - EVERGREEN]' };
+    const priorityIcons = {
+      A: '🔴 [A - BREAKING NEWS]',
+      B: '🟡 [B - PUBLISH TODAY]',
+      C: '🟢 [C - EVERGREEN]',
+    };
 
     return telegramApi.sendMessage(
       update.chatId,
@@ -81,7 +83,6 @@ export async function ocrArticleCommand(
       ].join('\n'),
       createAngleKeyboard()
     );
-
   } catch (error) {
     await sessionManager.cancel(update.chatId);
     return telegramApi.sendMessage(update.chatId, `❌ OCR Ingest gagal: ${error.message}`);

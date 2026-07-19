@@ -2,57 +2,57 @@ export const CONFIG_SCHEMA = Object.freeze({
   application: {
     environment: {
       required: false,
-      defaultValue: 'development'
-    }
+      defaultValue: 'development',
+    },
   },
 
   telegram: {
     botToken: {
       required: false,
-      secret: true
+      secret: true,
     },
     allowedUsers: {
-      required: false
-    }
+      required: false,
+    },
   },
 
   gemini: {
     apiKey: {
       required: false,
-      secret: true
-    }
+      secret: true,
+    },
   },
 
   openai: {
     apiKey: {
       required: false,
-      secret: true
-    }
+      secret: true,
+    },
   },
 
   wordpress: {
     endpoint: {
-      required: false
+      required: false,
     },
     username: {
-      required: false
+      required: false,
     },
     applicationPassword: {
       required: false,
-      secret: true
-    }
+      secret: true,
+    },
   },
 
   seo: {
     sitemapUrl: {
-      required: false
+      required: false,
     },
     rssUrl: {
-      required: false
+      required: false,
     },
     indexNowKey: {
       required: false,
-      secret: true
-    }
-  }
+      secret: true,
+    },
+  },
 });

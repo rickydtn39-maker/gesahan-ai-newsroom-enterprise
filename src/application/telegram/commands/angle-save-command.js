@@ -2,12 +2,7 @@ import { WORKFLOW_STATE } from '../../../core/constants/index.js';
 import { TOKENS } from '../../../core/container/index.js';
 import { createReviewKeyboard } from '../keyboards/index.js';
 
-export async function angleSaveCommand(
-  update,
-  telegramApi,
-  sessionManager,
-  container
-) {
+export async function angleSaveCommand(update, telegramApi, sessionManager, container) {
   const draft = await sessionManager.get(update.chatId);
 
   if (!draft || draft.state !== WORKFLOW_STATE.WAITING_ANGLE) {
@@ -22,7 +17,7 @@ export async function angleSaveCommand(
     ...draft,
     state: WORKFLOW_STATE.EDITORIAL_PROCESSING,
     angle: selectedAngle,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 
   await sessionManager.save(updatedDraftWithAngle);
@@ -42,7 +37,7 @@ export async function angleSaveCommand(
       ...updatedDraftWithAngle,
       state: WORKFLOW_STATE.WAITING_REVIEW,
       editorial: result,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     await sessionManager.save(completedDraft);
@@ -92,16 +87,15 @@ export async function angleSaveCommand(
         '',
         '📄 Gunakan tombol "Lihat Artikel Lengkap" untuk membaca hasil penyuntingan.',
         '',
-        'Silakan pilih tindakan berikut.'
+        'Silakan pilih tindakan berikut.',
       ].join('\n'),
       createReviewKeyboard()
     );
-
   } catch (error) {
     const fallbackDraft = {
       ...updatedDraftWithAngle,
       state: WORKFLOW_STATE.WAITING_ANGLE,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
     await sessionManager.save(fallbackDraft);
 

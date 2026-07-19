@@ -23,7 +23,7 @@ export class EventBus {
       } catch (error) {
         this.logger.error(`Error in event listener for event: ${event}`, {
           error: error.message,
-          stack: error.stack
+          stack: error.stack,
         });
       }
     });

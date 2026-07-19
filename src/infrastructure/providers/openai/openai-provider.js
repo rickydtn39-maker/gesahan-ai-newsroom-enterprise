@@ -12,8 +12,9 @@ export class OpenAiProvider {
 
     this.logger.info('Executing OpenAI/GitHub Models API call', { model: this.model });
 
+    let response;
     try {
-      const response = await fetch(url, {
+      response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -31,30 +32,50 @@ export class OpenAiProvider {
           response_format: request.schema ? { type: 'json_object' } : undefined
         })
       });
+    } catch (fetchErr) {
+      this.metrics.increment('openai_api_errors', 1, { error_type: 'network_failure' });
+      throw new Error(`OpenAI Connection Failed: ${fetchErr.message}`, { cause: fetchErr });
+    }
 
-      const duration = Date.now() - startTime;
-      this.metrics.timing('openai_api_latency', duration, { model: this.model });
+    const duration = Date.now() - startTime;
+    this.metrics.timing('openai_api_latency', duration, { model: this.model });
 
-      const payload = await response.json();
-
-      if (!response.ok) {
-        this.metrics.increment('openai_api_errors', 1, { status: response.status });
-        const msg = payload?.error?.message || `HTTP ${response.status}`;
-        throw new Error(`GitHub Models error (${response.status}): ${msg}`);
+    if (!response.ok) {
+      this.metrics.increment('openai_api_errors', 1, { status: response.status });
+      let errorDetails = '';
+      try {
+        const errorJson = await response.json();
+        errorDetails = errorJson?.error?.message || errorJson?.message || '';
+      } catch (_jsonErr) {
+        try {
+          errorDetails = await response.text();
+        } catch (_textErr) {
+          // Abaikan kegagalan jika tidak mampu membaca text response body
+        }
       }
+      throw new Error(`GitHub Models API Error [${response.status}]: ${errorDetails || response.statusText}`);
+    }
 
-      const content = payload?.choices?.[0]?.message?.content ?? '';
-      
-      const cleanContent = content
-        .replace(/^```json/i, '')
-        .replace(/^```/i, '')
-        .replace(/```$/i, '')
-        .trim();
+    let payload;
+    try {
+      payload = await response.json();
+    } catch (parseErr) {
+      this.metrics.increment('openai_api_errors', 1, { error_type: 'invalid_json' });
+      throw new Error('Gagal memproses parsing body response JSON dari OpenAI', { cause: parseErr });
+    }
 
+    const content = payload?.choices?.[0]?.message?.content ?? '';
+    
+    const cleanContent = content
+      .replace(/^```json/i, '')
+      .replace(/^```/i, '')
+      .replace(/```$/i, '')
+      .trim();
+
+    try {
       const parsed = JSON.parse(cleanContent);
       this.logger.info('OpenAI API call completed successfully', { durationMs: duration });
       return parsed;
-
     } catch (error) {
       this.metrics.increment('openai_api_errors', 1, { error_type: 'execution_failure' });
       this.logger.error('OpenAI API execution failed', { error: error.message });

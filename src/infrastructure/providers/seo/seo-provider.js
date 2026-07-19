@@ -20,15 +20,15 @@ export class SeoProvider {
         host: host,
         key: this.indexNowKey,
         keyLocation: `https://${host}/${this.indexNowKey}.txt`,
-        urlList: [articleUrl]
+        urlList: [articleUrl],
       };
 
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json; charset=utf-8'
+          'Content-Type': 'application/json; charset=utf-8',
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -76,9 +76,9 @@ export class SeoProvider {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: body.toString()
+        body: body.toString(),
       });
 
       if (!response.ok) {

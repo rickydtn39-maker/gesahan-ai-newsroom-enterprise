@@ -1,6 +1,6 @@
 import { createLogger } from '../logger/index.js';
 import { MetricsService } from '../metrics/index.js';
-import { EventBus } from '../event-bus/event-bus.js'; 
+import { EventBus } from '../event-bus/event-bus.js';
 
 import { DraftRepository, WhitelistRepository } from '../../infrastructure/persistence/kv/index.js';
 
@@ -13,13 +13,10 @@ import { SeoProvider } from '../../infrastructure/providers/seo/seo-provider.js'
 
 import { SessionManager } from '../../application/session/index.js';
 
-import {
-  EditorialEngine,
-  EditorialService
-} from '../../application/editorial/index.js';
+import { EditorialEngine, EditorialService } from '../../application/editorial/index.js';
 
 import { PublishingService } from '../../application/publishing/index.js';
-import { registerSeoSubscriber } from '../../application/publishing/subscribers/seo-subscriber.js'; 
+import { registerSeoSubscriber } from '../../application/publishing/subscribers/seo-subscriber.js';
 
 import { Container } from './container.js';
 import { TOKENS } from './tokens.js';
@@ -32,21 +29,12 @@ export function createContainer(configuration, env, correlationId = null) {
   // 🚀 LOGGER OTOMATIS TER-IKAT DENGAN CORRELATION ID REQUEST
   container.registerFactory(TOKENS.LOGGER, () => createLogger(correlationId));
 
-  container.registerFactory(
-    TOKENS.METRICS,
-    (c) => new MetricsService(c.resolve(TOKENS.LOGGER))
-  );
+  container.registerFactory(TOKENS.METRICS, (c) => new MetricsService(c.resolve(TOKENS.LOGGER)));
 
   // 🚀 REGISTER EVENT BUS SINGLETON
-  container.registerFactory(
-    TOKENS.EVENT_BUS,
-    (c) => new EventBus(c.resolve(TOKENS.LOGGER))
-  );
+  container.registerFactory(TOKENS.EVENT_BUS, (c) => new EventBus(c.resolve(TOKENS.LOGGER)));
 
-  container.registerFactory(
-    TOKENS.DRAFT_REPOSITORY,
-    () => new DraftRepository(env.GESAHAN_DRAFTS)
-  );
+  container.registerFactory(TOKENS.DRAFT_REPOSITORY, () => new DraftRepository(env.GESAHAN_DRAFTS));
 
   container.registerFactory(
     TOKENS.WHITELIST_REPOSITORY,
@@ -82,11 +70,7 @@ export function createContainer(configuration, env, correlationId = null) {
 
   container.registerFactory(
     TOKENS.OCR_PROVIDER,
-    () =>
-      new GeminiOcrProvider(
-        configuration.gemini.apiKey,
-        configuration.gemini.model
-      )
+    () => new GeminiOcrProvider(configuration.gemini.apiKey, configuration.gemini.model)
   );
 
   container.registerFactory(
@@ -96,11 +80,7 @@ export function createContainer(configuration, env, correlationId = null) {
 
   container.registerFactory(
     TOKENS.EDITORIAL_ENGINE,
-    (c) =>
-      new EditorialEngine(
-        c.resolve(TOKENS.AI_PROVIDER),
-        c.resolve(TOKENS.OPENAI_PROVIDER)
-      )
+    (c) => new EditorialEngine(c.resolve(TOKENS.AI_PROVIDER), c.resolve(TOKENS.OPENAI_PROVIDER))
   );
 
   container.registerFactory(
@@ -118,10 +98,7 @@ export function createContainer(configuration, env, correlationId = null) {
     () => new TelegramApi(configuration.telegram.botToken)
   );
 
-  container.registerFactory(
-    TOKENS.WORDPRESS_PROVIDER,
-    () => new WordPressProvider(configuration)
-  );
+  container.registerFactory(TOKENS.WORDPRESS_PROVIDER, () => new WordPressProvider(configuration));
 
   container.registerFactory(
     TOKENS.PUBLISHING_SERVICE,

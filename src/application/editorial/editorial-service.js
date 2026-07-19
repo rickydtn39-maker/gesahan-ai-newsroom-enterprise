@@ -56,23 +56,23 @@ export class EditorialService {
         article: {
           title: validated.title,
           lead: validated.lead,
-          content: validated.content
+          content: validated.content,
         },
         seo: {
           focusKeyword: stage1Result.seo.focusKeyword,
           metaDescription: stage1Result.seo.metaDescription,
           category: stage1Result.wordpress.category,
           tags: stage1Result.wordpress.tags,
-          slug
+          slug,
         },
         statistics: {
           wordCount,
-          readingTime
+          readingTime,
         },
         quality: {
           score: stage1Result.newsValue.score,
-          notes: validated.qcReport.notes
-        }
+          notes: validated.qcReport.notes,
+        },
       });
 
       this.metrics.timing('stage3_duration', Date.now() - startTime);

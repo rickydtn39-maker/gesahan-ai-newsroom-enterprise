@@ -14,7 +14,7 @@ export async function setAuthorCommand(update, telegramApi, whitelistRepository)
         'Contoh:',
         '`/setauthor ricky_reporter gHjK-1234-aBcd-9999`',
         '',
-        '*PENTING:* Anda harus terdaftar di whitelist dinamis terlebih dahulu sebelum dapat menggunakan fitur Multi-Author ini.'
+        '*PENTING:* Anda harus terdaftar di whitelist dinamis terlebih dahulu sebelum dapat menggunakan fitur Multi-Author ini.',
       ].join('\n')
     );
   }
@@ -39,7 +39,7 @@ export async function setAuthorCommand(update, telegramApi, whitelistRepository)
       ...list[userIndex],
       wpUsername,
       wpAppPassword,
-      wpConfiguredAt: new Date().toISOString()
+      wpConfiguredAt: new Date().toISOString(),
     };
 
     await whitelistRepository.save(list);
@@ -53,7 +53,7 @@ export async function setAuthorCommand(update, telegramApi, whitelistRepository)
         `• *WP Username:* \`${wpUsername}\``,
         '• *WP App Password:* `••••-••••-••••-••••`',
         '',
-        'Mulai sekarang, seluruh artikel yang Anda terbitkan akan ditulis langsung atas nama akun WordPress Anda sendiri!'
+        'Mulai sekarang, seluruh artikel yang Anda terbitkan akan ditulis langsung atas nama akun WordPress Anda sendiri!',
       ].join('\n')
     );
   } catch (error) {

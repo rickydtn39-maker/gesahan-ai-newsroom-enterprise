@@ -7,15 +7,12 @@ export class WhitelistRepository {
 
   async getAll() {
     const value = await this.namespace.get(KEY, {
-      type: 'json'
+      type: 'json',
     });
     return value || [];
   }
 
   async save(list) {
-    await this.namespace.put(
-      KEY,
-      JSON.stringify(list)
-    );
+    await this.namespace.put(KEY, JSON.stringify(list));
   }
 }

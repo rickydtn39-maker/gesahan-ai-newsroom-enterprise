@@ -1,7 +1,7 @@
 export async function addUserCommand(update, telegramApi, whitelistRepository) {
   const text = update.text || '';
   const parts = text.split(/\s+/);
-  
+
   if (parts.length < 3) {
     return telegramApi.sendMessage(
       update.chatId,
@@ -21,7 +21,7 @@ export async function addUserCommand(update, telegramApi, whitelistRepository) {
 
   try {
     const list = await whitelistRepository.getAll();
-    
+
     // Periksa apakah ID sudah terdaftar
     const existing = list.find((u) => Number(u.userId) === targetId);
     if (existing) {
@@ -84,10 +84,7 @@ export async function delUserCommand(update, telegramApi, whitelistRepository) {
       `🗑️ *AKSES DICABUT!*\n\nID pengguna *${targetId}* telah dihapus dari sistem database dinamis.`
     );
   } catch (error) {
-    return telegramApi.sendMessage(
-      update.chatId,
-      `❌ Gagal menghapus pengguna: ${error.message}`
-    );
+    return telegramApi.sendMessage(update.chatId, `❌ Gagal menghapus pengguna: ${error.message}`);
   }
 }
 
@@ -104,7 +101,7 @@ export async function listUsersCommand(update, telegramApi, whitelistRepository)
 
     const report = list
       .map((u, idx) => {
-        const authorIndicator = (u.wpUsername) ? '✍️' : '👤';
+        const authorIndicator = u.wpUsername ? '✍️' : '👤';
         return `${idx + 1}. *${u.name}* (\`${u.userId}\`) ${authorIndicator}`;
       })
       .join('\n');

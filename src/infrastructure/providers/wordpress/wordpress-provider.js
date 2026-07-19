@@ -20,9 +20,9 @@ export class WordPressProvider {
       headers: {
         Authorization: this.getAuthorization(customAuth),
         'Content-Disposition': `attachment; filename="${fileName}"`,
-        'Content-Type': mimeType
+        'Content-Type': mimeType,
       },
-      body: buffer
+      body: buffer,
     });
 
     const payload = await response.json();
@@ -35,47 +35,47 @@ export class WordPressProvider {
   }
 
   async createTags(tags = [], customAuth = null) {
-    const ids = [];
+    if (!tags || tags.length === 0) return [];
 
-    for (const tag of tags) {
+    // 🚀 HIGH PERFORMANCE PARALLEL TAG PROCESSING
+    const tagPromises = tags.map(async (tag) => {
       try {
         const search = await fetch(
           `${this.endpoint}/wp-json/wp/v2/tags?search=${encodeURIComponent(tag)}`,
           {
             headers: {
-              Authorization: this.getAuthorization(customAuth)
-            }
+              Authorization: this.getAuthorization(customAuth),
+            },
           }
         );
 
         const existing = await search.json();
 
         if (Array.isArray(existing) && existing.length > 0) {
-          ids.push(existing[0].id);
-          continue;
+          return existing[0].id;
         }
 
         const created = await fetch(`${this.endpoint}/wp-json/wp/v2/tags`, {
           method: 'POST',
           headers: {
             Authorization: this.getAuthorization(customAuth),
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            name: tag
-          })
+          body: JSON.stringify({ name: tag }),
         });
 
         if (created.ok) {
           const createdPayload = await created.json();
-          ids.push(createdPayload.id);
+          return createdPayload.id;
         }
       } catch (_error) {
-        continue;
+        return null;
       }
-    }
+      return null;
+    });
 
-    return ids;
+    const results = await Promise.all(tagPromises);
+    return results.filter((tagId) => tagId !== null);
   }
 
   async createPost(editorial, mediaId, customAuth = null) {
@@ -84,21 +84,20 @@ export class WordPressProvider {
     const categoryName = editorial.seo.category ? editorial.seo.category.toUpperCase() : 'BERITA';
     const categoryId = WORDPRESS_CATEGORY_MAP[categoryName] ?? 1;
 
-    // 🔄 PARSER RESILIEN MULTILINE: Mengubah semua level Heading Markdown menjadi HTML asli
+    // 🔄 PARSER RESILIEN MULTILINE
     const formattedContent = editorial.article.content
-      .replace(/^####\s+(.+?)\r?$/gm, '<h4>$1</h4>') // #### Judul -> <h4>Judul</h4>
-      .replace(/^###\s+(.+?)\r?$/gm, '<h3>$1</h3>')   // ### Judul -> <h3>Judul</h3>
-      .replace(/^##\s+(.+?)\r?$/gm, '<h2>$1</h2>')    // ## Judul -> <h2>Judul</h2>
-      .replace(/^#\s+(.+?)\r?$/gm, '<h1>$1</h1>');    // # Judul -> <h1>Judul</h1>
+      .replace(/^####\s+(.+?)\r?$/gm, '<h4>$1</h4>')
+      .replace(/^###\s+(.+?)\r?$/gm, '<h3>$1</h3>')
+      .replace(/^##\s+(.+?)\r?$/gm, '<h2>$1</h2>')
+      .replace(/^#\s+(.+?)\r?$/gm, '<h1>$1</h1>');
 
-    // Premium Layout: Menjadikan lead tercetak tebal (bold) di awal artikel
     const finalHtmlContent = `<strong>${editorial.article.lead}</strong>\n\n${formattedContent}`;
 
     const response = await fetch(`${this.endpoint}/wp-json/wp/v2/posts`, {
       method: 'POST',
       headers: {
         Authorization: this.getAuthorization(customAuth),
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         title: editorial.article.title,
@@ -109,16 +108,11 @@ export class WordPressProvider {
         categories: [categoryId],
         tags: tagIds,
         status: 'publish',
-
-        // =========================================================================
-        // 🚀 INTEGRASI METADATA YOAST SEO (Otomatis Mengisi Yoast SEO)
-        // =========================================================================
         meta: {
           _yoast_wpseo_focuskw: editorial.seo.focusKeyword || '',
-          _yoast_wpseo_metadesc: editorial.seo.metaDescription || ''
-        }
-        // =========================================================================
-      })
+          _yoast_wpseo_metadesc: editorial.seo.metaDescription || '',
+        },
+      }),
     });
 
     const payload = await response.json();
