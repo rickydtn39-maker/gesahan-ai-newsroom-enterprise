@@ -9,7 +9,7 @@ export class Draft {
       text: null,
       photo: null,
       document: null,
-      featuredImage: null
+      featuredImage: null,
     },
     editorial = null,
     stage1 = null,
@@ -46,7 +46,7 @@ export class Draft {
       published: this.published,
       createdAt: this.createdAt,
       ...changes,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
   }
 }

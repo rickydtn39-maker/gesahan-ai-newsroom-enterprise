@@ -18,19 +18,19 @@ export class OpenAiProvider {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
           model: this.model,
           messages: [
             {
               role: 'user',
-              content: request.prompt
-            }
+              content: request.prompt,
+            },
           ],
           temperature: 0.3,
-          response_format: request.schema ? { type: 'json_object' } : undefined
-        })
+          response_format: request.schema ? { type: 'json_object' } : undefined,
+        }),
       });
     } catch (fetchErr) {
       this.metrics.increment('openai_api_errors', 1, { error_type: 'network_failure' });
@@ -53,7 +53,9 @@ export class OpenAiProvider {
           // Abaikan kegagalan jika tidak mampu membaca text response body
         }
       }
-      throw new Error(`GitHub Models API Error [${response.status}]: ${errorDetails || response.statusText}`);
+      throw new Error(
+        `GitHub Models API Error [${response.status}]: ${errorDetails || response.statusText}`
+      );
     }
 
     let payload;
@@ -61,11 +63,13 @@ export class OpenAiProvider {
       payload = await response.json();
     } catch (parseErr) {
       this.metrics.increment('openai_api_errors', 1, { error_type: 'invalid_json' });
-      throw new Error('Gagal memproses parsing body response JSON dari OpenAI', { cause: parseErr });
+      throw new Error('Gagal memproses parsing body response JSON dari OpenAI', {
+        cause: parseErr,
+      });
     }
 
     const content = payload?.choices?.[0]?.message?.content ?? '';
-    
+
     const cleanContent = content
       .replace(/^```json/i, '')
       .replace(/^```/i, '')

@@ -10,11 +10,12 @@ export function loadConfiguration(environment) {
   return Object.freeze({
     application: {
       environment: environment.get('APP_ENV') ?? 'development',
+      encryptionSecret: environment.get('ENCRYPTION_SECRET') ?? null,
     },
 
     telegram: {
       botToken: environment.get('TELEGRAM_BOT_TOKEN') ?? null,
-      webhookSecretToken: environment.get('TELEGRAM_SECRET_TOKEN') ?? null, // 🚀 SECURE TELEGRAM WEBHOOK TOKEN
+      webhookSecretToken: environment.get('TELEGRAM_SECRET_TOKEN') ?? null,
       allowedUsers,
     },
 

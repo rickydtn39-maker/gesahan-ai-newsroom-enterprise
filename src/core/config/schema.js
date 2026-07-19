@@ -3,6 +3,12 @@ export const CONFIG_SCHEMA = Object.freeze({
     environment: {
       required: false,
       defaultValue: 'development',
+      type: 'string',
+    },
+    encryptionSecret: {
+      required: true,
+      secret: true,
+      type: 'string',
     },
   },
 
@@ -10,9 +16,16 @@ export const CONFIG_SCHEMA = Object.freeze({
     botToken: {
       required: false,
       secret: true,
+      type: 'string',
+    },
+    webhookSecretToken: {
+      required: false,
+      secret: true,
+      type: 'string',
     },
     allowedUsers: {
       required: false,
+      type: 'array',
     },
   },
 
@@ -20,6 +33,7 @@ export const CONFIG_SCHEMA = Object.freeze({
     apiKey: {
       required: false,
       secret: true,
+      type: 'string',
     },
   },
 
@@ -27,32 +41,39 @@ export const CONFIG_SCHEMA = Object.freeze({
     apiKey: {
       required: false,
       secret: true,
+      type: 'string',
     },
   },
 
   wordpress: {
     endpoint: {
       required: false,
+      type: 'string',
     },
     username: {
       required: false,
+      type: 'string',
     },
     applicationPassword: {
       required: false,
       secret: true,
+      type: 'string',
     },
   },
 
   seo: {
     sitemapUrl: {
       required: false,
+      type: 'string',
     },
     rssUrl: {
       required: false,
+      type: 'string',
     },
     indexNowKey: {
       required: false,
       secret: true,
+      type: 'string',
     },
   },
 });

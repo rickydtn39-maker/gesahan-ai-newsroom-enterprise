@@ -4,7 +4,7 @@ export async function viewArticleCommand(update, telegramApi, sessionManager) {
   const draft = await sessionManager.get(update.chatId);
 
   if (!draft) {
-    return telegramApi.sendMessage(update.chatId, MESSAGES.DRAFT_NOT_FOUND);
+    return telegramApi.sendMessage(update.chatId, MESSAGES.DRAFT.NOT_FOUND);
   }
 
   if (!draft.editorial) {

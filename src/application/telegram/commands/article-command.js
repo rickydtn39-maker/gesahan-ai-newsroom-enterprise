@@ -1,5 +1,6 @@
 import { WORKFLOW_STATE } from '../../../core/constants/index.js';
-import { TOKENS } from '../../../core/container/index.js';
+import { TOKENS } from '../../../core/container/tokens.js';
+import { MESSAGES } from '../../../core/constants/messages.js';
 import { createDraft } from '../../services/editorial-session.js';
 import { attachSourceText } from '../../services/draft-service.js';
 import { createAngleKeyboard } from '../keyboards/index.js';
@@ -13,32 +14,27 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
   }
 
   if (state !== WORKFLOW_STATE.WAITING_ARTICLE) {
-    return telegramApi.sendMessage(update.chatId, 'Masih ada proses yang sedang berjalan.');
+    return telegramApi.sendMessage(update.chatId, MESSAGES.WORKFLOW.ACTIVE_PROCESS);
   }
 
   if (!update.hasText) {
-    return telegramApi.sendMessage(update.chatId, 'Silakan kirim berita dalam bentuk teks.');
+    return telegramApi.sendMessage(update.chatId, MESSAGES.INTERACTION.INPUT_TEXT_REQUIRED);
   }
 
   const draft = await sessionManager.get(update.chatId);
   const draftWithSource = attachSourceText(draft, update.text);
   await sessionManager.save(draftWithSource);
 
-  await telegramApi.sendMessage(
-    update.chatId,
-    '⏳ [STAGE 1] Gemini Reporter sedang memindai, menganalisis SEO, dan mengklasifikasikan data...'
-  );
+  await telegramApi.sendMessage(update.chatId, MESSAGES.WORKFLOW.STAGE1_LOADING);
 
   try {
     const editorialService = container.resolve(TOKENS.EDITORIAL_SERVICE);
     const stage1Result = await editorialService.ingestStage1(draftWithSource);
 
-    const updatedDraft = {
-      ...draftWithSource,
+    const updatedDraft = draftWithSource.copyWith({
       state: WORKFLOW_STATE.WAITING_ANGLE,
       stage1: stage1Result,
-      updatedAt: new Date().toISOString(),
-    };
+    });
 
     await sessionManager.save(updatedDraft);
 
@@ -69,7 +65,7 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
     await sessionManager.cancel(update.chatId);
     return telegramApi.sendMessage(
       update.chatId,
-      `❌ Ingest gagal: ${error.message}\n\nSesi dibatalkan.`
+      `${MESSAGES.WORKFLOW.STAGE1_FAILED}${error.message}\n\nSesi dibatalkan.`
     );
   }
 }

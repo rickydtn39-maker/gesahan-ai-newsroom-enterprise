@@ -26,12 +26,10 @@ export function createContainer(configuration, env, correlationId = null) {
 
   container.registerInstance(TOKENS.CONFIGURATION, configuration);
 
-  // 🚀 LOGGER OTOMATIS TER-IKAT DENGAN CORRELATION ID REQUEST
   container.registerFactory(TOKENS.LOGGER, () => createLogger(correlationId));
 
   container.registerFactory(TOKENS.METRICS, (c) => new MetricsService(c.resolve(TOKENS.LOGGER)));
 
-  // 🚀 REGISTER EVENT BUS SINGLETON
   container.registerFactory(TOKENS.EVENT_BUS, (c) => new EventBus(c.resolve(TOKENS.LOGGER)));
 
   container.registerFactory(TOKENS.DRAFT_REPOSITORY, () => new DraftRepository(env.GESAHAN_DRAFTS));
@@ -107,13 +105,14 @@ export function createContainer(configuration, env, correlationId = null) {
         c.resolve(TOKENS.TELEGRAM_API),
         c.resolve(TOKENS.WORDPRESS_PROVIDER),
         c.resolve(TOKENS.WHITELIST_REPOSITORY),
-        c.resolve(TOKENS.EVENT_BUS), // Inject Decoupled Event Bus
+        c.resolve(TOKENS.EVENT_BUS),
         c.resolve(TOKENS.LOGGER),
-        c.resolve(TOKENS.METRICS)
+        c.resolve(TOKENS.METRICS),
+        c.resolve(TOKENS.DRAFT_REPOSITORY),
+        c.resolve(TOKENS.CONFIGURATION) // 🚀 Menyediakan config untuk deskripsi password AES-GCM
       )
   );
 
-  // 🚀 INITIALIZE SUBSCRIBERS / PLUGINS BOOTSTRAPPER
   registerSeoSubscriber(container);
 
   return container;

@@ -68,7 +68,7 @@ export async function dispatchTelegramUpdate(update, services) {
 
   if (!isAllowedUser && allowedUsersEnv.length > 0) {
     logger.warn('Unauthorized access attempt blocked', { userId, chatId: update.chatId });
-    return services.telegramApi.sendMessage(update.chatId, MESSAGES.UNAUTHORIZED_ACCESS);
+    return services.telegramApi.sendMessage(update.chatId, MESSAGES.AUTH.UNAUTHORIZED);
   }
 
   const text = (update.text ?? '').trim();
@@ -84,7 +84,7 @@ export async function dispatchTelegramUpdate(update, services) {
 
   // Author Multi-Author Command
   if (text.startsWith('/setauthor')) {
-    return setAuthorCommand(update, services.telegramApi, whitelistRepo);
+    return setAuthorCommand(update, services.telegramApi, whitelistRepo, config);
   }
 
   // Executing Static Commands
@@ -94,7 +94,7 @@ export async function dispatchTelegramUpdate(update, services) {
     return staticHandler(update, services.telegramApi, services.sessionManager, services.container);
   }
 
-  // Executing Dynamic Alur Kerja / Workflow State
+  // Executing Dynamic Workflow State
   const draft = await services.sessionManager.get(update.chatId);
 
   if (update.hasPhoto || update.hasDocument) {

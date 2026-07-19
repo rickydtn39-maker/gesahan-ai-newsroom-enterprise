@@ -1,15 +1,15 @@
 import { EditorialBuilder } from './builders/editorial-builder.js';
 
-export class EditorialPromptBuilder {
+export class PromptFactory {
   constructor() {
     this.editorialBuilder = new EditorialBuilder();
   }
 
-  buildGeminiPass(job) {
+  gemini(job) {
     return this.editorialBuilder.buildGeminiPass(job);
   }
 
-  buildChatGptPass(job, geminiResult) {
+  gpt(job, geminiResult) {
     return this.editorialBuilder.buildChatGptPass(job, geminiResult);
   }
 }

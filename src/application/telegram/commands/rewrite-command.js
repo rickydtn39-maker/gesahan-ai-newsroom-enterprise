@@ -1,15 +1,15 @@
 import { WORKFLOW_STATE } from '../../../core/constants/index.js';
-import { TOKENS } from '../../../core/container/index.js';
+import { TOKENS } from '../../../core/container/tokens.js';
 import { createReviewKeyboard } from '../keyboards/index.js';
+import { MESSAGES } from '../../../core/constants/messages.js';
 
 export async function rewriteCommand(update, telegramApi, sessionManager, container) {
   const draft = await sessionManager.get(update.chatId);
 
   if (!draft) {
-    return telegramApi.sendMessage(update.chatId, 'Draft tidak ditemukan.');
+    return telegramApi.sendMessage(update.chatId, MESSAGES.DRAFT.NOT_FOUND);
   }
 
-  // Validasi: Hanya bisa rewrite jika masih di tahap review
   if (draft.state !== WORKFLOW_STATE.WAITING_REVIEW) {
     return telegramApi.sendMessage(
       update.chatId,
@@ -17,7 +17,6 @@ export async function rewriteCommand(update, telegramApi, sessionManager, contai
     );
   }
 
-  // Notifikasi proses berjalan
   await telegramApi.sendMessage(
     update.chatId,
     '⏳ Menginstruksikan AI untuk menulis ulang artikel dari naskah asli...'
@@ -25,15 +24,11 @@ export async function rewriteCommand(update, telegramApi, sessionManager, contai
 
   try {
     const editorialService = container.resolve(TOKENS.EDITORIAL_SERVICE);
-
-    // Menjalankan ulang AI berdasarkan naskah asli (draft.source) dan data stage 1 yang tersimpan di memori
     const result = await editorialService.generate(draft, draft.stage1);
 
-    const updatedDraft = {
-      ...draft,
-      editorial: result, // Menggantikan editorial lama dengan hasil rewrite baru
-      updatedAt: new Date().toISOString(),
-    };
+    const updatedDraft = draft.copyWith({
+      editorial: result,
+    });
 
     await sessionManager.save(updatedDraft);
 

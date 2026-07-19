@@ -1,17 +1,10 @@
 import { createMainKeyboard } from '../keyboards/index.js';
+import { MESSAGES } from '../../../core/constants/messages.js';
 
 export async function startCommand(update, telegramApi) {
   return telegramApi.sendMessage(
     update.chatId,
-    [
-      '👋 Selamat datang di GESAHAN AI NEWSROOM',
-      '',
-      'Saya adalah AI Editorial Assistant.',
-      '',
-      'Saya akan membantu mengubah naskah menjadi artikel siap terbit dengan standar redaksi.',
-      '',
-      'Silakan pilih menu di bawah.',
-    ].join('\n'),
+    MESSAGES.INTERACTION.START_WELCOME,
     createMainKeyboard()
   );
 }

@@ -1,5 +1,6 @@
 import { WORKFLOW_STATE } from '../../../core/constants/index.js';
-import { TOKENS } from '../../../core/container/index.js';
+import { TOKENS } from '../../../core/container/tokens.js';
+import { MESSAGES } from '../../../core/constants/messages.js';
 import { createDraft } from '../../services/editorial-session.js';
 import { attachSourceText } from '../../services/draft-service.js';
 import { createAngleKeyboard } from '../keyboards/index.js';
@@ -13,18 +14,15 @@ export async function ocrArticleCommand(update, telegramApi, sessionManager, con
   }
 
   if (state !== WORKFLOW_STATE.WAITING_ARTICLE && state !== WORKFLOW_STATE.IDLE) {
-    return telegramApi.sendMessage(update.chatId, 'Masih ada proses yang sedang berjalan.');
+    return telegramApi.sendMessage(update.chatId, MESSAGES.WORKFLOW.ACTIVE_PROCESS);
   }
 
   const fileId = update.photo ? update.photo.file_id : update.document?.file_id;
   if (!fileId) {
-    return telegramApi.sendMessage(update.chatId, 'File foto atau dokumen tidak valid.');
+    return telegramApi.sendMessage(update.chatId, MESSAGES.OCR.INPUT_INVALID);
   }
 
-  await telegramApi.sendMessage(
-    update.chatId,
-    '🔍 [STAGE 1] Gemini Reporter sedang mengunduh media dan mengekstrak teks (OCR)...'
-  );
+  await telegramApi.sendMessage(update.chatId, MESSAGES.OCR.DOWNLOAD_FAILED);
 
   try {
     const downloadedFile = await telegramApi.downloadFile(fileId);
@@ -46,16 +44,14 @@ export async function ocrArticleCommand(update, telegramApi, sessionManager, con
       await sessionManager.cancel(update.chatId);
       return telegramApi.sendMessage(
         update.chatId,
-        `⚠️ *AKURASI OCR TERLALU RENDAH* (${stage1Result.confidence.ocrAccuracy}%)\n\nFoto/dokumen yang dikirim buram atau tidak terbaca jelas. Silakan kirim ulang foto yang lebih tajam.`
+        MESSAGES.OCR.LOW_ACCURACY.replace('{accuracy}', stage1Result.confidence.ocrAccuracy)
       );
     }
 
-    const updatedDraft = {
-      ...draftWithSource,
+    const updatedDraft = draftWithSource.copyWith({
       state: WORKFLOW_STATE.WAITING_ANGLE,
       stage1: stage1Result,
-      updatedAt: new Date().toISOString(),
-    };
+    });
 
     await sessionManager.save(updatedDraft);
 
@@ -85,6 +81,6 @@ export async function ocrArticleCommand(update, telegramApi, sessionManager, con
     );
   } catch (error) {
     await sessionManager.cancel(update.chatId);
-    return telegramApi.sendMessage(update.chatId, `❌ OCR Ingest gagal: ${error.message}`);
+    return telegramApi.sendMessage(update.chatId, `${MESSAGES.OCR.INGEST_FAILED}${error.message}`);
   }
 }

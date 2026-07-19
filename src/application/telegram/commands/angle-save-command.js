@@ -1,24 +1,23 @@
 import { WORKFLOW_STATE } from '../../../core/constants/index.js';
-import { TOKENS } from '../../../core/container/index.js';
+import { TOKENS } from '../../../core/container/tokens.js';
 import { createReviewKeyboard } from '../keyboards/index.js';
+import { MESSAGES } from '../../../core/constants/messages.js';
 
 export async function angleSaveCommand(update, telegramApi, sessionManager, container) {
   const draft = await sessionManager.get(update.chatId);
 
   if (!draft || draft.state !== WORKFLOW_STATE.WAITING_ANGLE) {
-    return telegramApi.sendMessage(update.chatId, 'Sesi angle tidak valid.');
+    return telegramApi.sendMessage(update.chatId, MESSAGES.DRAFT.NOT_FOUND);
   }
 
   const textInput = (update.text || '').trim();
   const isDefaultAi = textInput === '⏭️ Lanjut (Default AI)';
   const selectedAngle = isDefaultAi ? null : textInput;
 
-  const updatedDraftWithAngle = {
-    ...draft,
+  const updatedDraftWithAngle = draft.copyWith({
     state: WORKFLOW_STATE.EDITORIAL_PROCESSING,
     angle: selectedAngle,
-    updatedAt: new Date().toISOString(),
-  };
+  });
 
   await sessionManager.save(updatedDraftWithAngle);
 
@@ -33,12 +32,10 @@ export async function angleSaveCommand(update, telegramApi, sessionManager, cont
     const editorialService = container.resolve(TOKENS.EDITORIAL_SERVICE);
     const result = await editorialService.generate(updatedDraftWithAngle, draft.stage1);
 
-    const completedDraft = {
-      ...updatedDraftWithAngle,
+    const completedDraft = updatedDraftWithAngle.copyWith({
       state: WORKFLOW_STATE.WAITING_REVIEW,
       editorial: result,
-      updatedAt: new Date().toISOString(),
-    };
+    });
 
     await sessionManager.save(completedDraft);
 
@@ -92,11 +89,9 @@ export async function angleSaveCommand(update, telegramApi, sessionManager, cont
       createReviewKeyboard()
     );
   } catch (error) {
-    const fallbackDraft = {
-      ...updatedDraftWithAngle,
+    const fallbackDraft = updatedDraftWithAngle.copyWith({
       state: WORKFLOW_STATE.WAITING_ANGLE,
-      updatedAt: new Date().toISOString(),
-    };
+    });
     await sessionManager.save(fallbackDraft);
 
     return telegramApi.sendMessage(

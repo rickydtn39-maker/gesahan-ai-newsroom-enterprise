@@ -1,11 +1,24 @@
+import { decryptText } from '../../core/security/crypto.js';
+
 export class PublishingService {
-  constructor(telegramApi, wordpressProvider, whitelistRepository, eventBus, logger, metrics) {
+  constructor(
+    telegramApi,
+    wordpressProvider,
+    whitelistRepository,
+    eventBus,
+    logger,
+    metrics,
+    draftRepository,
+    config
+  ) {
     this.telegramApi = telegramApi;
     this.wordpressProvider = wordpressProvider;
     this.whitelistRepository = whitelistRepository;
-    this.eventBus = eventBus; // 🚀 Menggunakan Event Bus (No direct SEO Provider coupling)
+    this.eventBus = eventBus;
     this.logger = logger;
     this.metrics = metrics;
+    this.draftRepository = draftRepository;
+    this.config = config; // 🚀 Menyimpan global config
   }
 
   async publish(draft) {
@@ -25,11 +38,17 @@ export class PublishingService {
 
       let customAuth = null;
       if (userCredentials && userCredentials.wpUsername && userCredentials.wpAppPassword) {
+        // 🚀 DECRYPT PASSWORD MENGGUNAKAN KUNCI CONFIG AMAN (AES-GCM)
+        const decryptedPassword = await decryptText(
+          userCredentials.wpAppPassword,
+          this.config.application.encryptionSecret
+        );
+
         customAuth = {
           username: userCredentials.wpUsername,
-          applicationPassword: userCredentials.wpAppPassword,
+          applicationPassword: decryptedPassword,
         };
-        this.logger.info('Using custom author credentials for WordPress publishing', {
+        this.logger.info('Using custom secure author credentials for WordPress publishing', {
           userId: draft.userId,
           wpUsername: userCredentials.wpUsername,
         });
@@ -53,7 +72,7 @@ export class PublishingService {
       // 4. Create Post menggunakan dynamic auth
       const post = await this.wordpressProvider.createPost(draft.editorial, media.id, customAuth);
 
-      // 5. 🚀 EVENT BUS DECOUPLING: Kirim sinyal bahwa artikel sukses diterbitkan
+      // 5. EVENT BUS DECOUPLING: Kirim sinyal bahwa artikel sukses diterbitkan
       try {
         const articleUrl = post.link;
         await this.eventBus.publish('ARTICLE_PUBLISHED', {
@@ -65,6 +84,21 @@ export class PublishingService {
       } catch (eventError) {
         this.logger.error('Error triggering ARTICLE_PUBLISHED event subscribers', {
           error: eventError.message,
+        });
+      }
+
+      // 6. ARCHIVE MEMORY LEWAT METHOD RESMI REPOSITORI
+      try {
+        await this.draftRepository.archiveDraftMemory(post.id, {
+          id: post.id,
+          title: draft.editorial.article.title,
+          category: draft.editorial.seo.category,
+          keyword: draft.editorial.seo.focusKeyword,
+          url: post.link,
+        });
+      } catch (archError) {
+        this.logger.error('Failed to archive draft into repository memory', {
+          error: archError.message,
         });
       }
 

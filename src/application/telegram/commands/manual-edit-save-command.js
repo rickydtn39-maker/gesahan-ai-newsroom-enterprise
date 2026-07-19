@@ -1,11 +1,12 @@
 import { WORKFLOW_STATE } from '../../../core/constants/index.js';
 import { createReviewKeyboard } from '../keyboards/index.js';
+import { MESSAGES } from '../../../core/constants/messages.js';
 
 export async function manualEditSaveCommand(update, telegramApi, sessionManager) {
   const draft = await sessionManager.get(update.chatId);
 
   if (!draft) {
-    return telegramApi.sendMessage(update.chatId, 'Draft tidak ditemukan.');
+    return telegramApi.sendMessage(update.chatId, MESSAGES.DRAFT.NOT_FOUND);
   }
 
   if (draft.state !== WORKFLOW_STATE.WAITING_MANUAL_EDIT) {
@@ -26,8 +27,7 @@ export async function manualEditSaveCommand(update, telegramApi, sessionManager)
   const content = update.text.trim();
   const wordCount = content.split(/\s+/).filter(Boolean).length;
 
-  const updatedDraft = {
-    ...draft,
+  const updatedDraft = draft.copyWith({
     state: WORKFLOW_STATE.WAITING_REVIEW,
     editorial: {
       ...previous,
@@ -45,22 +45,9 @@ export async function manualEditSaveCommand(update, telegramApi, sessionManager)
         notes: ['Artikel telah diedit manual oleh wartawan.'],
       },
     },
-    updatedAt: new Date().toISOString(),
-  };
+  });
 
   await sessionManager.save(updatedDraft);
 
-  return telegramApi.sendMessage(
-    update.chatId,
-    [
-      '✅ Edit manual disimpan.',
-      '',
-      'Artikel siap ditinjau kembali.',
-      '',
-      'Gunakan 📄 Lihat Artikel Lengkap untuk membaca hasil akhir.',
-      '',
-      'Silakan pilih tindakan berikutnya.',
-    ].join('\n'),
-    createReviewKeyboard()
-  );
+  return telegramApi.sendMessage(update.chatId, MESSAGES.MANUAL_EDIT.SAVED, createReviewKeyboard());
 }

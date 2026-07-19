@@ -1,4 +1,6 @@
-export async function setAuthorCommand(update, telegramApi, whitelistRepository) {
+import { encryptText } from '../../../../core/security/crypto.js';
+
+export async function setAuthorCommand(update, telegramApi, whitelistRepository, config) {
   const text = update.text || '';
   const parts = text.split(/\s+/);
 
@@ -20,7 +22,7 @@ export async function setAuthorCommand(update, telegramApi, whitelistRepository)
   }
 
   const wpUsername = parts[1];
-  const wpAppPassword = parts.slice(2).join(' ');
+  const rawWpAppPassword = parts.slice(2).join(' ');
 
   try {
     const list = await whitelistRepository.getAll();
@@ -34,11 +36,16 @@ export async function setAuthorCommand(update, telegramApi, whitelistRepository)
       );
     }
 
-    // Update profil whitelist user dengan kredensial WordPress
+    // 🚀 ENKRIPSI PASSWORD WARTAWAN MENGGUNAKAN AES-GCM YANG KUAT SEBELUM MASUK KV
+    const encryptedPassword = await encryptText(
+      rawWpAppPassword,
+      config.application.encryptionSecret
+    );
+
     list[userIndex] = {
       ...list[userIndex],
       wpUsername,
-      wpAppPassword,
+      wpAppPassword: encryptedPassword, // Tersimpan aman terenkripsi
       wpConfiguredAt: new Date().toISOString(),
     };
 
@@ -51,7 +58,7 @@ export async function setAuthorCommand(update, telegramApi, whitelistRepository)
         '',
         `• *Nama:* ${list[userIndex].name}`,
         `• *WP Username:* \`${wpUsername}\``,
-        '• *WP App Password:* `••••-••••-••••-••••`',
+        '• *WP App Password:* `••••-••••-••••-••••` (Terenkripsi AES-GCM)',
         '',
         'Mulai sekarang, seluruh artikel yang Anda terbitkan akan ditulis langsung atas nama akun WordPress Anda sendiri!',
       ].join('\n')
