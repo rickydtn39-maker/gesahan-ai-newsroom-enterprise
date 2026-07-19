@@ -3,6 +3,7 @@ import { TOKENS } from '../../core/container/tokens.js';
 import { MESSAGES } from '../../core/constants/messages.js';
 
 import { startCommand } from './commands/start-command.js';
+import { helpCommand } from './commands/help-command.js'; // 🚀 NEW: Help Command
 import { cancelCommand } from './commands/cancel-command.js';
 import { newArticleCommand } from './commands/new-article-command.js';
 import { articleCommand } from './commands/article-command.js';
@@ -39,6 +40,9 @@ class CommandRegistry {
 
 const registry = new CommandRegistry()
   .registerStatic('/start', startCommand)
+  .registerStatic('🏁 Mulai', startCommand) // 🚀 MAP TOMBOL MULAI
+  .registerStatic('/help', helpCommand) // 🚀 MAP PERINTAH HELP
+  .registerStatic('ℹ️ Bantuan', helpCommand) // 🚀 MAP TOMBOL BANTUAN
   .registerStatic('📰 Berita Baru', newArticleCommand)
   .registerStatic('🆕 Berita Baru', newArticleCommand)
   .registerStatic('📄 Lihat Artikel Lengkap', viewArticleCommand)
@@ -101,12 +105,7 @@ export async function dispatchTelegramUpdate(update, services) {
     if (draft?.state === WORKFLOW_STATE.WAITING_FEATURED_IMAGE && update.hasPhoto) {
       return featuredImageCommand(update, services.telegramApi, services.sessionManager);
     }
-    return ocrArticleCommand(
-      update,
-      services.telegramApi,
-      services.sessionManager,
-      services.container
-    );
+    return ocrArticleCommand(update, services.telegramApi, services.sessionManager, services.container);
   }
 
   if (draft?.state === WORKFLOW_STATE.WAITING_MANUAL_EDIT) {
@@ -114,12 +113,7 @@ export async function dispatchTelegramUpdate(update, services) {
   }
 
   if (draft?.state === WORKFLOW_STATE.WAITING_ANGLE) {
-    return angleSaveCommand(
-      update,
-      services.telegramApi,
-      services.sessionManager,
-      services.container
-    );
+    return angleSaveCommand(update, services.telegramApi, services.sessionManager, services.container);
   }
 
   return articleCommand(update, services.telegramApi, services.sessionManager, services.container);

@@ -6,9 +6,10 @@ export class GeminiOcrProvider {
 
   async extractText(buffer, mimeType) {
     const modelName = this.model;
-    const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${this.apiKey}`;
+    // 🚀 MENGGUNAKAN ENDPOINT v1beta AGAR KONSISTEN DENGAN GEMINI PROVIDER UTAMA
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${this.apiKey}`;
 
-    // 🚀 CHUNKED BUFFER TO BASE64 ENCODING FOR CPU OPTIMIZATION
+    // Chunked buffer to base64 encoding untuk menghindari CPU throttling di Cloudflare Workers
     const bytes = new Uint8Array(buffer);
     let binary = '';
     const chunkLength = 8192;
@@ -22,35 +23,37 @@ export class GeminiOcrProvider {
         {
           parts: [
             {
-              text: 'Ekstrak seluruh teks dari gambar atau dokumen ini secara lengkap. Jangan melakukan ringkasan. Jangan menambahkan komentar. Jangan memperbaiki isi. Salin apa adanya.',
+              text: 'Ekstrak seluruh teks dari gambar atau dokumen ini secara lengkap. Jangan melakukan ringkasan. Jangan menambahkan komentar. Jangan memperbaiki isi. Salin apa adanya.'
             },
             {
               inlineData: {
                 mimeType: mimeType || 'image/jpeg',
-                data: base64,
-              },
-            },
-          ],
-        },
+                data: base64
+              }
+            }
+          ]
+        }
       ],
       generationConfig: {
-        temperature: 0,
-      },
+        temperature: 0
+      }
     };
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
 
     const payload = await response.json();
 
     if (!response.ok) {
       throw new Error(
-        `Gemini OCR (${response.status}): ${payload?.error?.message || 'Unknown error'}`
+        `Gemini OCR (${response.status}): ${
+          payload?.error?.message || 'Unknown error'
+        }`
       );
     }
 
