@@ -84,8 +84,15 @@ export class WordPressProvider {
     const categoryName = editorial.seo.category ? editorial.seo.category.toUpperCase() : 'BERITA';
     const categoryId = WORDPRESS_CATEGORY_MAP[categoryName] ?? 1;
 
+    // 🔄 PARSER RESILIEN MULTILINE: Mengubah semua level Heading Markdown menjadi HTML asli
+    const formattedContent = editorial.article.content
+      .replace(/^####\s+(.+?)\r?$/gm, '<h4>$1</h4>') // #### Judul -> <h4>Judul</h4>
+      .replace(/^###\s+(.+?)\r?$/gm, '<h3>$1</h3>')   // ### Judul -> <h3>Judul</h3>
+      .replace(/^##\s+(.+?)\r?$/gm, '<h2>$1</h2>')    // ## Judul -> <h2>Judul</h2>
+      .replace(/^#\s+(.+?)\r?$/gm, '<h1>$1</h1>');    // # Judul -> <h1>Judul</h1>
+
     // Premium Layout: Menjadikan lead tercetak tebal (bold) di awal artikel
-    const finalHtmlContent = `<strong>${editorial.article.lead}</strong>\n\n${editorial.article.content}`;
+    const finalHtmlContent = `<strong>${editorial.article.lead}</strong>\n\n${formattedContent}`;
 
     const response = await fetch(`${this.endpoint}/wp-json/wp/v2/posts`, {
       method: 'POST',

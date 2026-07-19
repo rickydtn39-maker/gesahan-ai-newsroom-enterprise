@@ -11,24 +11,27 @@ export async function viewArticleCommand(update, telegramApi, sessionManager) {
 
   const article = draft.editorial.article;
 
+  // 🔄 PARSER RESILIEN MULTILINE: Deteksi tanda #, ##, ###, atau #### lalu ubah menjadi bold di Telegram
+  const cleanContent = article.content.replace(/^#{1,4}\s+(.+?)\r?$/gm, '*■ $1*');
+
   return telegramApi.sendMessage(
     update.chatId,
     [
-      '📰 JUDUL',
+      '📰 *JUDUL*',
       '',
       article.title,
       '',
       '━━━━━━━━━━━━━━━━━━',
       '',
-      '📝 LEAD',
+      '📝 *LEAD*',
       '',
       article.lead,
       '',
       '━━━━━━━━━━━━━━━━━━',
       '',
-      '📄 ARTIKEL',
+      '📄 *ARTIKEL*',
       '',
-      article.content,
+      cleanContent,
     ].join('\n')
   );
 }

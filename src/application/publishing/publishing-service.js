@@ -1,9 +1,9 @@
 export class PublishingService {
-  constructor(telegramApi, wordpressProvider, seoProvider, whitelistRepository, logger, metrics) {
+  constructor(telegramApi, wordpressProvider, whitelistRepository, eventBus, logger, metrics) {
     this.telegramApi = telegramApi;
     this.wordpressProvider = wordpressProvider;
-    this.seoProvider = seoProvider;
     this.whitelistRepository = whitelistRepository;
+    this.eventBus = eventBus; // 🚀 Menggunakan Event Bus (No direct SEO Provider coupling)
     this.logger = logger;
     this.metrics = metrics;
   }
@@ -53,18 +53,17 @@ export class PublishingService {
       // 4. Create Post menggunakan dynamic auth
       const post = await this.wordpressProvider.createPost(draft.editorial, media.id, customAuth);
 
-      // 5. Eksekusi ping SEO secara paralel asinkron (isolated-safe try/catch)
+      // 5. 🚀 EVENT BUS DECOUPLING: Kirim sinyal bahwa artikel sukses diterbitkan
       try {
         const articleUrl = post.link;
-        this.logger.info('Triggering post-publish SEO indexing tasks', { articleUrl });
-        
-        await Promise.all([
-          this.seoProvider.submitToIndexNow(articleUrl),
-          this.seoProvider.pingSitemap(),
-          this.seoProvider.pingRssFeed()
-        ]);
-      } catch (seoError) {
-        this.logger.error('SEO indexing pings warning', { error: seoError.message });
+        await this.eventBus.publish('ARTICLE_PUBLISHED', {
+          articleUrl,
+          postId: post.id,
+          draftId: draft.id,
+          editorial: draft.editorial
+        });
+      } catch (eventError) {
+        this.logger.error('Error triggering ARTICLE_PUBLISHED event subscribers', { error: eventError.message });
       }
 
       const duration = Date.now() - startTime;

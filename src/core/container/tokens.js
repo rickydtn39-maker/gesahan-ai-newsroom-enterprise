@@ -27,5 +27,7 @@ export const TOKENS = Object.freeze({
 
   OCR_PROVIDER: 'ocr-provider',
 
-  SEO_PROVIDER: 'seo-provider'
+  SEO_PROVIDER: 'seo-provider',
+
+  EVENT_BUS: 'event-bus' // 🚀 NEW: Token untuk Event Bus Engine
 });

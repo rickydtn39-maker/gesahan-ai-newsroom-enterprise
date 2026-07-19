@@ -1,5 +1,5 @@
 import { ConsoleLogger } from './console-logger.js';
 
-export function createLogger() {
-  return new ConsoleLogger();
+export function createLogger(correlationId = null) {
+  return new ConsoleLogger(correlationId);
 }

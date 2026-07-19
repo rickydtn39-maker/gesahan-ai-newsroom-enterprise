@@ -27,6 +27,7 @@ export class TelegramApi {
     const payload = {
       chat_id: chatId,
       text,
+      parse_mode: 'Markdown',
     };
 
     if (replyMarkup) {

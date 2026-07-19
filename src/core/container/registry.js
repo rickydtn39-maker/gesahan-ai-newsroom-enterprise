@@ -1,5 +1,6 @@
 import { createLogger } from '../logger/index.js';
 import { MetricsService } from '../metrics/index.js';
+import { EventBus } from '../event-bus/event-bus.js'; 
 
 import { DraftRepository, WhitelistRepository } from '../../infrastructure/persistence/kv/index.js';
 
@@ -18,20 +19,28 @@ import {
 } from '../../application/editorial/index.js';
 
 import { PublishingService } from '../../application/publishing/index.js';
+import { registerSeoSubscriber } from '../../application/publishing/subscribers/seo-subscriber.js'; 
 
 import { Container } from './container.js';
 import { TOKENS } from './tokens.js';
 
-export function createContainer(configuration, env) {
+export function createContainer(configuration, env, correlationId = null) {
   const container = new Container();
 
   container.registerInstance(TOKENS.CONFIGURATION, configuration);
 
-  container.registerFactory(TOKENS.LOGGER, () => createLogger());
+  // 🚀 LOGGER OTOMATIS TER-IKAT DENGAN CORRELATION ID REQUEST
+  container.registerFactory(TOKENS.LOGGER, () => createLogger(correlationId));
 
   container.registerFactory(
     TOKENS.METRICS,
     (c) => new MetricsService(c.resolve(TOKENS.LOGGER))
+  );
+
+  // 🚀 REGISTER EVENT BUS SINGLETON
+  container.registerFactory(
+    TOKENS.EVENT_BUS,
+    (c) => new EventBus(c.resolve(TOKENS.LOGGER))
   );
 
   container.registerFactory(
@@ -51,19 +60,23 @@ export function createContainer(configuration, env) {
 
   container.registerFactory(
     TOKENS.AI_PROVIDER,
-    () =>
+    (c) =>
       new GeminiProvider(
         configuration.gemini.apiKey,
-        configuration.gemini.model
+        configuration.gemini.model,
+        c.resolve(TOKENS.LOGGER),
+        c.resolve(TOKENS.METRICS)
       )
   );
 
   container.registerFactory(
     TOKENS.OPENAI_PROVIDER,
-    () =>
+    (c) =>
       new OpenAiProvider(
         configuration.openai.apiKey,
-        configuration.openai.model
+        configuration.openai.model,
+        c.resolve(TOKENS.LOGGER),
+        c.resolve(TOKENS.METRICS)
       )
   );
 
@@ -116,12 +129,15 @@ export function createContainer(configuration, env) {
       new PublishingService(
         c.resolve(TOKENS.TELEGRAM_API),
         c.resolve(TOKENS.WORDPRESS_PROVIDER),
-        c.resolve(TOKENS.SEO_PROVIDER),
         c.resolve(TOKENS.WHITELIST_REPOSITORY),
+        c.resolve(TOKENS.EVENT_BUS), // Inject Decoupled Event Bus
         c.resolve(TOKENS.LOGGER),
         c.resolve(TOKENS.METRICS)
       )
   );
+
+  // 🚀 INITIALIZE SUBSCRIBERS / PLUGINS BOOTSTRAPPER
+  registerSeoSubscriber(container);
 
   return container;
 }
