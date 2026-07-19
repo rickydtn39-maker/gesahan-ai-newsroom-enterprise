@@ -16,7 +16,14 @@
   "vars": {
     "GEMINI_MODEL": "gemini-2.5-flash",
     "OPENAI_MODEL": "gpt-4o",
-    "WORDPRESS_ENDPOINT": "https://gesahannusantara.com"
+    "WORDPRESS_ENDPOINT": "https://gesahannusantara.com",
+    
+    // =========================================================================
+    // 🚀 INTEGRASI CONFIG SEO & INDEXNOW
+    // =========================================================================
+    "SITEMAP_URL": "https://gesahannusantara.com/sitemap_index.xml",
+    "RSS_URL": "https://gesahannusantara.com/feed/",
+    "INDEXNOW_KEY": "64b0718503b44b8ba269d58be16cb798"
   },
 
   "kv_namespaces": [

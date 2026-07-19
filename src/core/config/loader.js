@@ -32,6 +32,12 @@ export function loadConfiguration(environment) {
       username: environment.get('WORDPRESS_USERNAME') ?? null,
       applicationPassword:
         environment.get('WORDPRESS_APPLICATION_PASSWORD') ?? null
+    },
+
+    seo: {
+      sitemapUrl: environment.get('SITEMAP_URL') ?? null,
+      rssUrl: environment.get('RSS_URL') ?? null,
+      indexNowKey: environment.get('INDEXNOW_KEY') ?? null
     }
   });
 }

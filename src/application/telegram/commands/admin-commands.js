@@ -103,12 +103,15 @@ export async function listUsersCommand(update, telegramApi, whitelistRepository)
     }
 
     const report = list
-      .map((u, idx) => `${idx + 1}. *${u.name}* (\`${u.userId}\`)`)
+      .map((u, idx) => {
+        const authorIndicator = (u.wpUsername) ? '✍️' : '👤';
+        return `${idx + 1}. *${u.name}* (\`${u.userId}\`) ${authorIndicator}`;
+      })
       .join('\n');
 
     return telegramApi.sendMessage(
       update.chatId,
-      `📋 *DAFTAR PENGGUNA BOT (DINAMIS):*\n\n${report}\n\n_Catatan: Pengguna super admin (environment) tidak masuk dalam daftar ini._`
+      `📋 *DAFTAR PENGGUNA BOT (DINAMIS):*\n\n${report}\n\n_Catatan:\n- ✍️ = Sudah mengatur akun WordPress penulis.\n- 👤 = Belum mengatur akun (Fallback ke Admin).\n- Pengguna super admin (environment) tidak masuk dalam daftar ini._`
     );
   } catch (error) {
     return telegramApi.sendMessage(

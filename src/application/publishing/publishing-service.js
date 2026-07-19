@@ -1,7 +1,9 @@
 export class PublishingService {
-  constructor(telegramApi, wordpressProvider, logger, metrics) {
+  constructor(telegramApi, wordpressProvider, seoProvider, whitelistRepository, logger, metrics) {
     this.telegramApi = telegramApi;
     this.wordpressProvider = wordpressProvider;
+    this.seoProvider = seoProvider;
+    this.whitelistRepository = whitelistRepository;
     this.logger = logger;
     this.metrics = metrics;
   }
@@ -17,18 +19,53 @@ export class PublishingService {
 
       const featured = draft.source.featuredImage;
 
-      // 1. Download Foto Telegram
+      // 1. Deteksi dinamis kredensial Multi-Author dari whitelist KV
+      const whitelist = await this.whitelistRepository.getAll();
+      const userCredentials = whitelist.find((u) => Number(u.userId) === Number(draft.userId));
+
+      let customAuth = null;
+      if (userCredentials && userCredentials.wpUsername && userCredentials.wpAppPassword) {
+        customAuth = {
+          username: userCredentials.wpUsername,
+          applicationPassword: userCredentials.wpAppPassword
+        };
+        this.logger.info('Using custom author credentials for WordPress publishing', {
+          userId: draft.userId,
+          wpUsername: userCredentials.wpUsername
+        });
+      } else {
+        this.logger.info('Falling back to global WordPress Admin credentials', {
+          userId: draft.userId
+        });
+      }
+
+      // 2. Download Foto Telegram
       const file = await this.telegramApi.downloadFile(featured.fileId);
 
-      // 2. Upload Media WordPress
+      // 3. Upload Media WordPress menggunakan dynamic auth
       const media = await this.wordpressProvider.uploadMedia(
         file.fileName,
         file.mimeType,
-        file.buffer
+        file.buffer,
+        customAuth
       );
 
-      // 3. Create Post
-      const post = await this.wordpressProvider.createPost(draft.editorial, media.id);
+      // 4. Create Post menggunakan dynamic auth
+      const post = await this.wordpressProvider.createPost(draft.editorial, media.id, customAuth);
+
+      // 5. Eksekusi ping SEO secara paralel asinkron (isolated-safe try/catch)
+      try {
+        const articleUrl = post.link;
+        this.logger.info('Triggering post-publish SEO indexing tasks', { articleUrl });
+        
+        await Promise.all([
+          this.seoProvider.submitToIndexNow(articleUrl),
+          this.seoProvider.pingSitemap(),
+          this.seoProvider.pingRssFeed()
+        ]);
+      } catch (seoError) {
+        this.logger.error('SEO indexing pings warning', { error: seoError.message });
+      }
 
       const duration = Date.now() - startTime;
       this.logger.info('Publishing completed successfully', {

@@ -41,5 +41,18 @@ export const CONFIG_SCHEMA = Object.freeze({
       required: false,
       secret: true
     }
+  },
+
+  seo: {
+    sitemapUrl: {
+      required: false
+    },
+    rssUrl: {
+      required: false
+    },
+    indexNowKey: {
+      required: false,
+      secret: true
+    }
   }
 });

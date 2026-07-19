@@ -8,6 +8,7 @@ import { GeminiProvider } from '../../infrastructure/providers/gemini/index.js';
 import { OpenAiProvider } from '../../infrastructure/providers/openai/index.js';
 import { WordPressProvider } from '../../infrastructure/providers/wordpress/index.js';
 import { GeminiOcrProvider } from '../../infrastructure/providers/ocr/index.js';
+import { SeoProvider } from '../../infrastructure/providers/seo/seo-provider.js';
 
 import { SessionManager } from '../../application/session/index.js';
 
@@ -76,6 +77,11 @@ export function createContainer(configuration, env) {
   );
 
   container.registerFactory(
+    TOKENS.SEO_PROVIDER,
+    (c) => new SeoProvider(configuration, c.resolve(TOKENS.LOGGER))
+  );
+
+  container.registerFactory(
     TOKENS.EDITORIAL_ENGINE,
     (c) =>
       new EditorialEngine(
@@ -110,6 +116,8 @@ export function createContainer(configuration, env) {
       new PublishingService(
         c.resolve(TOKENS.TELEGRAM_API),
         c.resolve(TOKENS.WORDPRESS_PROVIDER),
+        c.resolve(TOKENS.SEO_PROVIDER),
+        c.resolve(TOKENS.WHITELIST_REPOSITORY),
         c.resolve(TOKENS.LOGGER),
         c.resolve(TOKENS.METRICS)
       )

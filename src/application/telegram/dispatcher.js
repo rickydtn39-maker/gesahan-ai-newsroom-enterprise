@@ -15,6 +15,7 @@ import { editCommand } from './commands/edit-command.js';
 import { manualEditSaveCommand } from './commands/manual-edit-save-command.js';
 import { ocrArticleCommand } from './commands/ocr-article-command.js';
 import { angleSaveCommand } from './commands/angle-save-command.js';
+import { setAuthorCommand } from './commands/setauthor-command.js';
 
 import { addUserCommand, delUserCommand, listUsersCommand } from './commands/admin-commands.js';
 
@@ -57,6 +58,14 @@ export async function dispatchTelegramUpdate(update, services) {
     if (text === '/listusers') {
       return listUsersCommand(update, services.telegramApi, whitelistRepo);
     }
+  }
+  // =========================================================================
+
+  // =========================================================================
+  // ✍️ GERBANG PENULIS MANDIRI (Bisa diakses oleh semua pengguna Whitelist Dinamis)
+  // =========================================================================
+  if (text.startsWith('/setauthor')) {
+    return setAuthorCommand(update, services.telegramApi, whitelistRepo);
   }
   // =========================================================================
 

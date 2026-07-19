@@ -7,16 +7,18 @@ export class WordPressProvider {
     this.applicationPassword = configuration.wordpress.applicationPassword;
   }
 
-  get authorization() {
-    const credentials = `${this.username}:${this.applicationPassword}`;
+  getAuthorization(customAuth = null) {
+    const username = customAuth?.username || this.username;
+    const password = customAuth?.applicationPassword || this.applicationPassword;
+    const credentials = `${username}:${password}`;
     return `Basic ${btoa(credentials)}`;
   }
 
-  async uploadMedia(fileName, mimeType, buffer) {
+  async uploadMedia(fileName, mimeType, buffer, customAuth = null) {
     const response = await fetch(`${this.endpoint}/wp-json/wp/v2/media`, {
       method: 'POST',
       headers: {
-        Authorization: this.authorization,
+        Authorization: this.getAuthorization(customAuth),
         'Content-Disposition': `attachment; filename="${fileName}"`,
         'Content-Type': mimeType
       },
@@ -32,7 +34,7 @@ export class WordPressProvider {
     return payload;
   }
 
-  async createTags(tags = []) {
+  async createTags(tags = [], customAuth = null) {
     const ids = [];
 
     for (const tag of tags) {
@@ -41,7 +43,7 @@ export class WordPressProvider {
           `${this.endpoint}/wp-json/wp/v2/tags?search=${encodeURIComponent(tag)}`,
           {
             headers: {
-              Authorization: this.authorization
+              Authorization: this.getAuthorization(customAuth)
             }
           }
         );
@@ -56,7 +58,7 @@ export class WordPressProvider {
         const created = await fetch(`${this.endpoint}/wp-json/wp/v2/tags`, {
           method: 'POST',
           headers: {
-            Authorization: this.authorization,
+            Authorization: this.getAuthorization(customAuth),
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -76,8 +78,8 @@ export class WordPressProvider {
     return ids;
   }
 
-  async createPost(editorial, mediaId) {
-    const tagIds = await this.createTags(editorial.seo.tags);
+  async createPost(editorial, mediaId, customAuth = null) {
+    const tagIds = await this.createTags(editorial.seo.tags, customAuth);
 
     const categoryName = editorial.seo.category ? editorial.seo.category.toUpperCase() : 'BERITA';
     const categoryId = WORDPRESS_CATEGORY_MAP[categoryName] ?? 1;
@@ -88,7 +90,7 @@ export class WordPressProvider {
     const response = await fetch(`${this.endpoint}/wp-json/wp/v2/posts`, {
       method: 'POST',
       headers: {
-        Authorization: this.authorization,
+        Authorization: this.getAuthorization(customAuth),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
