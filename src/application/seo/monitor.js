@@ -22,7 +22,7 @@ export class SeoIndexMonitor {
       return this.createFailureResult(500, error.message);
     }
 
-    // Ekstraksi Metadata Resilien menggunakan Regular Expressions untuk Cloudflare Workers
+    // Ekstraksi Metadata Resilien menggunakan Regular Expressions
     const title = this.extractRegex(html, /<title[^>]*>([\s\S]*?)<\/title>/i);
     const canonical = this.extractRegex(html, /<link[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["'][^>]*>/i) || 
                       this.extractRegex(html, /<link[^>]*href=["']([^"']+)["'][^>]*rel=["']canonical["'][^>]*>/i);
@@ -39,15 +39,17 @@ export class SeoIndexMonitor {
     const hasNewsArticle = schemas.some(s => s['@type'] === 'NewsArticle' || s['@type'] === 'Article' || (Array.isArray(s['@graph']) && s['@graph'].some(g => g['@type'] === 'NewsArticle' || g['@type'] === 'Article')));
     const hasBreadcrumb = schemas.some(s => s['@type'] === 'BreadcrumbList' || (Array.isArray(s['@graph']) && s['@graph'].some(g => g['@type'] === 'BreadcrumbList')));
 
+    // Isolasi Konten Artikel Utama (Mengabaikan header, sidebar, footer)
+    const mainContentHtml = this.extractMainContent(html);
+
     // Konten Analisis
-    const bodyContent = this.extractRegex(html, /<body[^>]*>([\s\S]*?)<\/body>/i) || html;
-    const cleanText = bodyContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const cleanText = mainContentHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     const wordCount = cleanText.split(/\s+/).filter(Boolean).length;
     const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
-    // Analisis Link & Image
-    const links = this.extractLinks(html, articleUrl);
-    const images = this.extractImages(html);
+    // Analisis Link & Image hanya di dalam Konten Artikel Utama
+    const links = this.extractLinks(mainContentHtml, articleUrl);
+    const images = this.extractImages(mainContentHtml);
     const featuredImageMeta = ogTags['image'] || twitterTags['image'] || null;
 
     // Sitemap Presence Validation
@@ -89,7 +91,7 @@ export class SeoIndexMonitor {
         throw new Error(`HTTP ${res.status}`);
       } catch (error) {
         if (i === maxRetries) throw error;
-        await new Promise(r => setTimeout(res, delay));
+        await new Promise(r => setTimeout(r, delay));
         delay *= 2;
       }
     }
@@ -98,6 +100,23 @@ export class SeoIndexMonitor {
   extractRegex(html, regex) {
     const match = html.match(regex);
     return match ? match[1].trim() : '';
+  }
+
+  // 🚀 HELPER BARU: Mengisolasi html agar hanya memproses tag di dalam artikel utama
+  extractMainContent(html) {
+    const patterns = [
+      /<article[^>]*>([\s\S]*?)<\/article>/i, // Struktur standar HTML5
+      /<div[^>]*class=["']?[^"']*(entry-content|post-content|wp-block-post-content)[^"']*["']?[^>]*>([\s\S]*?)<\/div\s*>/i // Class WordPress Umum
+    ];
+
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match) return match[1];
+    }
+
+    // Fallback jika class kustom tidak ditemukan: Ambil area body
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    return bodyMatch ? bodyMatch[1] : html;
   }
 
   extractMetaProperties(html, prefix) {
@@ -134,7 +153,7 @@ export class SeoIndexMonitor {
       try {
         schemas.push(JSON.parse(match[1].trim()));
       } catch (_e) {
-        // Ignored invalid JSON script blocks
+        // Abaikan JSON-LD yang rusak
       }
     }
     return schemas;
@@ -181,7 +200,6 @@ export class SeoIndexMonitor {
     if (!this.sitemapUrl) return false;
     
     try {
-      // 🚀 Deteksi otomatis post sitemap URL dari sitemap utama WordPress
       const sitemapTarget = this.sitemapUrl.replace('sitemap_index.xml', 'post-sitemap.xml');
       const response = await fetch(sitemapTarget);
       if (!response.ok) return false;
