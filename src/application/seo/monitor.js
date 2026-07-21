@@ -102,7 +102,6 @@ export class SeoIndexMonitor {
     return match ? match[1].trim() : '';
   }
 
-  // 🚀 HELPER BARU: Mengisolasi html agar hanya memproses tag di dalam artikel utama
   extractMainContent(html) {
     const patterns = [
       /<article[^>]*>([\s\S]*?)<\/article>/i, // Struktur standar HTML5
@@ -183,8 +182,22 @@ export class SeoIndexMonitor {
     let match;
 
     while ((match = regex.exec(html)) !== null) {
-      total++;
       const attrs = match[1];
+
+      // 🚀 FILTER PENGAMAN BARU: Abaikan gambar non-artikel secara cerdas (Avatar/Gravatar, Share Buttons, Logo, Ikon)
+      if (
+        attrs.includes('avatar') || 
+        attrs.includes('gravatar') || 
+        attrs.includes('share') || 
+        attrs.includes('social') || 
+        attrs.includes('icon') || 
+        attrs.includes('logo') ||
+        attrs.includes('attachment-thumbnail') // Abaikan gambar thumbnail artikel terkait di bawah
+      ) {
+        continue; // Lewati gambar ini dari audit ALT
+      }
+
+      total++;
       const altMatch = attrs.match(/alt=["']([^"']*)["']/i);
       if (altMatch && altMatch[1].trim().length > 0) {
         withAlt++;

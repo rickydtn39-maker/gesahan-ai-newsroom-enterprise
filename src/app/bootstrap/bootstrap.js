@@ -1,3 +1,5 @@
+// FILE: src/app/bootstrap/bootstrap.js
+
 import { createConfiguration } from '../../core/config/index.js';
 import { createContainer } from '../../core/container/index.js';
 import { Router } from '../router/router.js';
@@ -9,7 +11,8 @@ export async function bootstrap(request, env, ctx) {
 
   try {
     const configuration = createConfiguration(env);
-    const container = createContainer(configuration, env, correlationId);
+    // 🚀 MEWARISKAN CTX RUNTIME KE CONTAINER
+    const container = createContainer(configuration, env, ctx, correlationId);
     const router = registerRoutes(new Router());
 
     return await router.handle(request, {

@@ -32,8 +32,14 @@ export class SeoIntelligenceSuite {
       const indexNowResponse = await this.indexNow.submit(articleUrl);
       const indexNowSuccess = indexNowResponse.success;
 
-      // 2. Tunggu sirkulasi 3 detik & Mulai Audit Monitor (Stage 6)
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // =========================================================================
+      // 🚀 JEDA RITMIK REDAKSI (4 DETIK)
+      // Memberikan waktu bagi server WordPress untuk stabil, flushes object cache,
+      // dan memastikan notifikasi Telegram Sukses Terbit mendarat terlebih dahulu.
+      // =========================================================================
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+      
+      // 2. Mulai Audit Monitor (Stage 6)
       const auditResult = await this.monitor.audit(articleUrl);
 
       // 3. Validasi SEO Kepatuhan (Stage 6)
@@ -68,10 +74,10 @@ export class SeoIntelligenceSuite {
 
       // 6. Kirim Laporan ke Telegram Chat Pribadi Wartawan (Telegram Report)
       if (chatId) {
-        await this.reporter.send(chatId, auditResult, validation, scoring, indexNowSuccess, articleUrl);
+        await this.reporter.send(chatId, auditResult, validation, scoring, indexNowResponse, articleUrl);
       }
 
-      // 7. 🚀 BROADCAST BARU: Kirim Salinan Laporan ke Grup Redaksi (Jika terpasang di wrangler.jsonc)
+      // 7. Broadcast: Kirim Salinan Laporan ke Grup Redaksi (Jika terpasang di wrangler.jsonc)
       if (this.config.telegram.groupChatId) {
         try {
           await this.reporter.send(
@@ -79,7 +85,7 @@ export class SeoIntelligenceSuite {
             auditResult,
             validation,
             scoring,
-            indexNowSuccess,
+            indexNowResponse,
             articleUrl
           );
         } catch (groupReportError) {

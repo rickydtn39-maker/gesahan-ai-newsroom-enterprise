@@ -5,7 +5,7 @@ import { TOKENS } from '../../../core/container/tokens.js';
 export function registerSeoSubscriber(container) {
   const eventBus = container.resolve(TOKENS.EVENT_BUS);
   const seoProvider = container.resolve(TOKENS.SEO_PROVIDER);
-  const seoIntelligence = container.resolve(TOKENS.SEO_INTELLIGENCE); // 🚀 Hubungkan Modul Baru
+  const seoIntelligence = container.resolve(TOKENS.SEO_INTELLIGENCE);
   const logger = container.resolve(TOKENS.LOGGER);
 
   // 🚀 LISTEN TO 'ARTICLE_PUBLISHED' EVENT
@@ -13,7 +13,7 @@ export function registerSeoSubscriber(container) {
     const { articleUrl } = eventData;
     logger.info('Event ARTICLE_PUBLISHED received. Initiating subscriber tasks', { articleUrl });
 
-    // 1. Jalankan Traditional Pings (Bing & WebSub Google) secara Non-Blocking
+    // 1. Jalankan Traditional Pings (Sitemap Bing & WebSub Google) secara instan
     try {
       await Promise.all([
         seoProvider.pingSitemap(),
@@ -24,14 +24,22 @@ export function registerSeoSubscriber(container) {
       logger.error('XML Sitemap/RSS Ping Broadcast experienced minor failures', { error: pingError.message });
     }
 
-    // 2. Jalankan SEO Intelligence Suite v1.0 (Stage 6 & 7 & Report) secara Non-Blocking
-    // Dibungkus try/catch agar kesalahan apapun pada audit tidak menggagalkan status publish
-    try {
-      // Jalankan tanpa 'await' jika ingin melepasnya secara penuh (fire-and-forget), 
-      // namun karena dijalankan asinkron di dalam event loop, membiarkannya berjalan asinkron di sini sudah aman.
-      await seoIntelligence.run(eventData);
-    } catch (auditError) {
-      logger.error('Fatal internal audit suite runtime error', { error: auditError.message });
+    // =========================================================================
+    // 🚀 BACKGROUND TASK SHIELDING (NON-BLOCKING)
+    // Jalankan audit SEO di latar belakang tanpa menahan pesan Telegram Utama.
+    // Gunakan ctx.waitUntil agar Cloudflare tidak mematikan proses di tengah jalan.
+    // =========================================================================
+    const ctx = container.has('ctx') ? container.resolve('ctx') : null;
+    const auditPromise = seoIntelligence.run(eventData);
+
+    if (ctx && typeof ctx.waitUntil === 'function') {
+      logger.info('SEO Suite audit registered under Cloudflare background execution shield');
+      ctx.waitUntil(auditPromise);
+    } else {
+      logger.warn('Cloudflare context is absent. Executing audit without system shielding');
+      auditPromise.catch(auditError => {
+        logger.error('Background SEO Intelligence Suite execution failed', { error: auditError.message });
+      });
     }
   });
 }

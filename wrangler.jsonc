@@ -10,26 +10,23 @@
   "workers_dev": true,
 
   "observability": {
-    "enabled": true,
+    "enabled": true
   },
 
   "vars": {
     "GEMINI_MODEL": "gemini-2.5-flash",
     "OPENAI_MODEL": "gpt-4o",
     "WORDPRESS_ENDPOINT": "https://gesahannusantara.com",
-
-    // =========================================================================
-    // 🚀 INTEGRASI CONFIG SEO & INDEXNOW
-    // =========================================================================
     "SITEMAP_URL": "https://gesahannusantara.com/sitemap_index.xml",
     "RSS_URL": "https://gesahannusantara.com/feed/",
     "INDEXNOW_KEY": "64b0718503b44b8ba269d58be16cb798",
+    "TELEGRAM_GROUP_CHAT_ID": "-1004373552876"
   },
 
   "kv_namespaces": [
     {
       "binding": "GESAHAN_DRAFTS",
-      "id": "99a5f633cacf46249c139cd40bf2a7ec",
-    },
-  ],
+      "id": "99a5f633cacf46249c139cd40bf2a7ec"
+    }
+  ]
 }

@@ -5,9 +5,8 @@ export class SeoValidator {
     const validations = {
       httpStatus: auditResult.httpStatus === 200,
       canonical: auditResult.canonical === originalUrl,
-      // 🚀 ATURAN BARU: Toleransi panjang judul dilonggarkan menjadi 40 - 95 karakter
-      titleLength: auditResult.title.length >= 40 && auditResult.title.length <= 95,
-      // 🚀 ATURAN BARU: Toleransi deskripsi meta dilonggarkan menjadi 100 - 200 karakter
+      // 🚀 PENYEMPURNAAN ATURAN: Melonggarkan batas atas panjang judul dari 95 menjadi 115 karakter
+      titleLength: auditResult.title.length >= 40 && auditResult.title.length <= 115,
       metaDescLength: auditResult.metaDescription.length >= 100 && auditResult.metaDescription.length <= 200,
       robotsValid: auditResult.robots.includes('index') && auditResult.robots.includes('follow'),
       hasSchema: auditResult.hasNewsArticle,
@@ -23,7 +22,7 @@ export class SeoValidator {
     const warnings = [];
     if (!validations.httpStatus) warnings.push(`HTTP status is ${auditResult.httpStatus}. Expected 200 OK.`);
     if (!validations.canonical) warnings.push('Canonical URL mismatch with the published post address.');
-    if (!validations.titleLength) warnings.push(`SEO Title too ${auditResult.title.length < 40 ? 'short' : 'long'} (${auditResult.title.length} chars). Ideal: 40-95.`);
+    if (!validations.titleLength) warnings.push(`SEO Title too ${auditResult.title.length < 40 ? 'short' : 'long'} (${auditResult.title.length} chars). Ideal: 40-115.`);
     if (!validations.metaDescLength) warnings.push(`Meta Description length is ${auditResult.metaDescription.length} chars. Ideal: 100-200.`);
     if (!validations.robotsValid) warnings.push(`Robots tags prevent indexing: "${auditResult.robots || 'None'}"`);
     if (!validations.hasSchema) warnings.push('Missing NewsArticle/Article Schema JSON-LD markup.');

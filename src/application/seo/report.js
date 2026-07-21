@@ -5,9 +5,17 @@ export class SeoTelegramReporter {
     this.telegramApi = telegramApi;
   }
 
-  async send(chatId, audit, validation, scoring, indexNowSuccess, articleUrl) {
+  async send(chatId, audit, validation, scoring, indexNowResponse, articleUrl) {
     const formatStatus = (isValid) => (isValid ? '✅' : '❌');
     const formatSitemap = (isPresent) => (isPresent ? '✅ Ditemukan' : '⚠️ Warning (Not Listed)');
+
+    // 🚀 ATURAN DETEKSI INDEXNOW SECARA INFORMATIF
+    const formatIndexNow = (response) => {
+      if (response.success) {
+        return `✅ Success (${response.status})`;
+      }
+      return `❌ Failed - ${response.error || 'Connection Timeout'}`;
+    };
 
     const message = [
       '📊 *SEO INDEX REPORT*',
@@ -36,7 +44,7 @@ export class SeoTelegramReporter {
       `External Link : 🌍 ${audit.externalLinksCount}`,
       `Reading Time : ⏱️ ${audit.readingTime} menit`,
       `Word Count : 📝 ${audit.wordCount} kata`,
-      `IndexNow : ${indexNowSuccess ? '✅ Success' : '❌ Failed'}`,
+      `IndexNow : ${formatIndexNow(indexNowResponse)}`, // 🚀 Menampilkan detail status deskriptif
       '',
       '━━━━━━━━━━━━━━━━━━━━━━━',
       '',
@@ -50,7 +58,6 @@ export class SeoTelegramReporter {
     try {
       await this.telegramApi.sendMessage(chatId, message);
     } catch (error) {
-      // Non-blocking Telegram Report: Catat error tanpa menghentikan sistem.
       console.error('Failed to dispatch SEO telegram report message', error);
     }
   }
