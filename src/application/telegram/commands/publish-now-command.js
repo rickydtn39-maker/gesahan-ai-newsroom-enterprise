@@ -1,3 +1,5 @@
+// FILE: src/application/telegram/commands/publish-now-command.js
+
 import { TOKENS } from '../../../core/container/index.js';
 import { createMainKeyboard } from '../keyboards/index.js';
 
@@ -36,12 +38,26 @@ export async function publishNowCommand(update, telegramApi, sessionManager, con
     const totalDuration = Date.now() - new Date(draft.createdAt).getTime();
 
     // =========================================================================
-    // 📊 STAGE 6: POST-PUBLISH ANALYTICS LOG (Guaranteed Data Schema)
+    // DETEKSI NAMA PENULIS SECARA DINAMIS DARI WHITELIST KV
+    // =========================================================================
+    let authorName = 'Super Admin';
+    try {
+      const whitelistRepo = container.resolve(TOKENS.WHITELIST_REPOSITORY);
+      const whitelist = await whitelistRepo.getAll();
+      const author = whitelist.find((u) => Number(u.userId) === Number(draft.userId));
+      if (author) {
+        authorName = author.name;
+      }
+    } catch (_err) {
+      // Fallback aman jika whitelist tidak dapat dibaca
+    }
+
+    // =========================================================================
+    // 📊 STAGE 6: POST-PUBLISH ANALYTICS LOG
     // =========================================================================
     const logger = container.resolve(TOKENS.LOGGER);
     const metrics = container.resolve(TOKENS.METRICS);
 
-    // Kita sekarang bisa mengakses draft.stage1 secara langsung dan percaya diri
     const analyticsLog = {
       event: 'POST_PUBLISH_ANALYTICS',
       articleId: published.id,
@@ -63,11 +79,10 @@ export async function publishNowCommand(update, telegramApi, sessionManager, con
     metrics.increment('publishing_completed', 1, { priority: draft.stage1.priority });
 
     // =========================================================================
-    // 🧠 STAGE 7: EDITORIAL MEMORY SYSTEM (Follow-up Story Linker)
+    // 🧠 STAGE 7: EDITORIAL MEMORY SYSTEM
     // =========================================================================
     const draftRepo = container.resolve(TOKENS.DRAFT_REPOSITORY);
 
-    // Simpan draf saat ini ke riwayat memori KV sebelum dihapus dari sesi aktif
     const archivedKey = `newsroom:memory:${published.id}`;
     await draftRepo.storage.put(archivedKey, {
       id: published.id,
@@ -81,26 +96,43 @@ export async function publishNowCommand(update, telegramApi, sessionManager, con
     // Reset status sesi aktif di Telegram menjadi IDLE
     await sessionManager.cancel(update.chatId);
 
-    return telegramApi.sendMessage(
+    // =========================================================================
+    // TELEGRAM BROADCAST PAYLOAD
+    // =========================================================================
+    const publishReportText = [
+      '🚀 *ARTIKEL RESMI TERBIT DI MEDIA NASIONAL!*',
+      '━━━━━━━━━━━━━━━━━━',
+      `📰 *Judul:* ${draft.editorial.article.title}`,
+      `✍️ *Penulis:* ${authorName}`,
+      `🏷️ *Kanal:* ${draft.editorial.seo.category}`,
+      `🚨 *Priority:* ${draft.stage1.priority}`,
+      `⚡ *Waktu Kerja:* ${Math.ceil(totalDuration / 1000)} detik`,
+      '━━━━━━━━━━━━━━━━━━',
+      '',
+      `🔗 *URL Artikel:*`,
+      `${published.url}`,
+      '',
+      `🆔 *WP Post ID:* \`${published.id}\``,
+      '━━━━━━━━━━━━━━━━━━',
+    ].join('\n');
+
+    // 1. Kirim Laporan ke Wartawan (Private Chat)
+    await telegramApi.sendMessage(
       update.chatId,
-      [
-        '🚀 *ARTIKEL RESMI TERBIT DI MEDIA NASIONAL!*',
-        '━━━━━━━━━━━━━━━━━━',
-        `📰 *Judul:* ${draft.editorial.article.title}`,
-        `🏷️ *Kanal:* ${draft.editorial.seo.category}`,
-        `🚨 *Priority:* ${draft.stage1.priority}`,
-        `⚡ *Waktu Kerja:* ${Math.ceil(totalDuration / 1000)} detik`,
-        '━━━━━━━━━━━━━━━━━━',
-        '',
-        `🔗 *URL Artikel:*`,
-        `${published.url}`,
-        '',
-        `🆔 *WP Post ID:* \`${published.id}\``,
-        '━━━━━━━━━━━━━━━━━━',
-        'Sesi draf ini telah ditutup dengan aman. Silakan ketik berita baru untuk memulai.',
-      ].join('\n'),
+      `${publishReportText}\nSesi draf ini telah ditutup dengan aman. Silakan klik "📰 Berita Baru" untuk memulai kembali.`,
       createMainKeyboard()
     );
+
+    // 2. Kirim Laporan ke Grup Redaksi (Jika terkonfigurasi)
+    const config = container.resolve(TOKENS.CONFIGURATION);
+    if (config.telegram.groupChatId) {
+      try {
+        await telegramApi.sendMessage(config.telegram.groupChatId, publishReportText);
+      } catch (groupError) {
+        logger.error('Failed to send publish success report to Coordination Group', { error: groupError.message });
+      }
+    }
+
   } catch (error) {
     return telegramApi.sendMessage(
       update.chatId,

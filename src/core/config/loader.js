@@ -1,3 +1,5 @@
+// FILE: src/core/config/loader.js
+
 export function loadConfiguration(environment) {
   const allowedUsersRaw = environment.get('ALLOWED_USERS') ?? '';
 
@@ -17,6 +19,7 @@ export function loadConfiguration(environment) {
       botToken: environment.get('TELEGRAM_BOT_TOKEN') ?? null,
       webhookSecretToken: environment.get('TELEGRAM_SECRET_TOKEN') ?? null,
       allowedUsers,
+      groupChatId: environment.get('TELEGRAM_GROUP_CHAT_ID') ?? null, // 🚀 Membaca ID Grup Redaksi
     },
 
     gemini: {

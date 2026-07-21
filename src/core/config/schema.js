@@ -1,3 +1,5 @@
+// FILE: src/core/config/schema.js
+
 export const CONFIG_SCHEMA = Object.freeze({
   application: {
     environment: {
@@ -26,6 +28,10 @@ export const CONFIG_SCHEMA = Object.freeze({
     allowedUsers: {
       required: false,
       type: 'array',
+    },
+    groupChatId: { // 🚀 Skema validasi pengaman untuk ID Grup Redaksi
+      required: false,
+      type: 'string',
     },
   },
 

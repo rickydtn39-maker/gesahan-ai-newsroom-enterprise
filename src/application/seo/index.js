@@ -23,7 +23,7 @@ export class SeoIntelligenceSuite {
 
   async run(eventData) {
     const { articleUrl, postId, draftId, editorial } = eventData;
-    const chatId = editorial.chatId || eventData.chatId; // Safe fallback path
+    const chatId = editorial.chatId || eventData.chatId;
 
     this.logger.info('SEO Intelligence Suite v1.0 activated', { postId, articleUrl });
 
@@ -66,14 +66,31 @@ export class SeoIntelligenceSuite {
       };
       await this.analyticsLogger.saveReport(reportPayload);
 
-      // 6. Kirim Laporan ke Telegram Chat Editor (Telegram Report)
+      // 6. Kirim Laporan ke Telegram Chat Pribadi Wartawan (Telegram Report)
       if (chatId) {
         await this.reporter.send(chatId, auditResult, validation, scoring, indexNowSuccess, articleUrl);
       }
 
+      // 7. 🚀 BROADCAST BARU: Kirim Salinan Laporan ke Grup Redaksi (Jika terpasang di wrangler.jsonc)
+      if (this.config.telegram.groupChatId) {
+        try {
+          await this.reporter.send(
+            this.config.telegram.groupChatId,
+            auditResult,
+            validation,
+            scoring,
+            indexNowSuccess,
+            articleUrl
+          );
+        } catch (groupReportError) {
+          this.logger.error('Failed to broadcast SEO report to Telegram Group', {
+            error: groupReportError.message
+          });
+        }
+      }
+
       this.logger.info('SEO Intelligence Suite completed analysis successfully', { postId, score: scoring.score });
     } catch (suiteError) {
-      // Sesuai Spesifikasi: Modul gagal tidak boleh menghentikan fungsionalitas publikasi utama
       this.logger.error('SEO Intelligence Suite suite executed with errors', {
         error: suiteError.message,
         stack: suiteError.stack
