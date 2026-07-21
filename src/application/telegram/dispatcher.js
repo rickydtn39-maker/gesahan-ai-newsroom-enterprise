@@ -1,9 +1,11 @@
+// FILE: src/application/telegram/dispatcher.js
+
 import { WORKFLOW_STATE } from '../../core/constants/index.js';
 import { TOKENS } from '../../core/container/tokens.js';
 import { MESSAGES } from '../../core/constants/messages.js';
 
 import { startCommand } from './commands/start-command.js';
-import { helpCommand } from './commands/help-command.js'; // 🚀 NEW: Help Command
+import { helpCommand } from './commands/help-command.js';
 import { cancelCommand } from './commands/cancel-command.js';
 import { newArticleCommand } from './commands/new-article-command.js';
 import { articleCommand } from './commands/article-command.js';
@@ -40,9 +42,9 @@ class CommandRegistry {
 
 const registry = new CommandRegistry()
   .registerStatic('/start', startCommand)
-  .registerStatic('🏁 Mulai', startCommand) // 🚀 MAP TOMBOL MULAI
-  .registerStatic('/help', helpCommand) // 🚀 MAP PERINTAH HELP
-  .registerStatic('ℹ️ Bantuan', helpCommand) // 🚀 MAP TOMBOL BANTUAN
+  .registerStatic('🏁 Mulai', startCommand)
+  .registerStatic('/help', helpCommand)
+  .registerStatic('ℹ️ Bantuan', helpCommand)
   .registerStatic('📰 Berita Baru', newArticleCommand)
   .registerStatic('🆕 Berita Baru', newArticleCommand)
   .registerStatic('📄 Lihat Artikel Lengkap', viewArticleCommand)
@@ -61,6 +63,16 @@ export async function dispatchTelegramUpdate(update, services) {
   const config = services.container.resolve(TOKENS.CONFIGURATION);
   const whitelistRepo = services.container.resolve(TOKENS.WHITELIST_REPOSITORY);
   const logger = services.container.resolve(TOKENS.LOGGER);
+
+  // =========================================================================
+  // 🚀 PENYARING KEAMANAN (SAFETY GUARD CLAUSE)
+  // Abaikan semua pesan masuk jika berasal dari Grup (ID bernilai Negatif).
+  // Bot hanya merespon input dari obrolan pribadi / DM (ID bernilai Positif).
+  // =========================================================================
+  if (update.chatId && Number(update.chatId) < 0) {
+    logger.debug('Ignored group message to prevent session collision', { chatId: update.chatId });
+    return; // Keluar secara sunyi tanpa membalas chat di grup
+  }
 
   const allowedUsersEnv = config.telegram.allowedUsers || [];
   const dynamicWhitelist = await whitelistRepo.getAll();
