@@ -10,7 +10,12 @@ export class IndexNowService {
   async submit(articleUrl) {
     if (!this.indexNowKey || !this.sitemapUrl) {
       this.logger.warn('IndexNow skipped: key or host is not configured.');
-      return { success: false, status: 0, error: 'CONFIG_MISSING' };
+      return { 
+        success: false, 
+        status: 0, 
+        error: 'Configuration Missing', 
+        message: 'Key or host is not defined in environment.' 
+      };
     }
 
     const host = new URL(this.sitemapUrl).hostname;
@@ -37,20 +42,48 @@ export class IndexNowService {
           body: JSON.stringify(payload),
         });
 
+        // IndexNow mengembalikan 200, 202, atau 204 untuk sukses
         if (response.ok) {
           this.logger.info('IndexNow submission successful', { articleUrl, status: response.status });
-          return { success: true, status: response.status };
+          return { success: true, status: response.status, error: null };
         }
 
-        throw new Error(`HTTP ${response.status}`);
+        // Petakan status error IndexNow secara spesifik
+        const errorDetails = this.mapHttpStatus(response.status);
+        throw new Error(errorDetails);
+
       } catch (error) {
         this.logger.warn(`IndexNow submission failed on attempt ${attempt}`, { error: error.message });
+        
         if (attempt === maxRetries) {
-          return { success: false, status: 500, error: error.message };
+          const status = parseInt(error.message) || 500;
+          return { 
+            success: false, 
+            status: status, 
+            error: this.mapHttpStatus(status) 
+          };
         }
+        
         await new Promise((resolve) => setTimeout(resolve, delay));
         delay *= 2; // Exponential backoff
       }
+    }
+  }
+
+  mapHttpStatus(status) {
+    switch (status) {
+      case 400:
+        return '400 Bad Request (Invalid parameters)';
+      case 403:
+        return '403 Forbidden (Key/Host mismatch or key.txt not found)';
+      case 422:
+        return '422 Unprocessable (URL doesn\'t belong to host)';
+      case 429:
+        return '429 Rate Limited (Too many requests)';
+      case 500:
+        return '500 Server Error (IndexNow service down)';
+      default:
+        return `${status || 0} Connection Timeout/Network Error`;
     }
   }
 }
