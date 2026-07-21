@@ -1,3 +1,5 @@
+// FILE: src/application/publishing/publishing-service.js
+
 import { decryptText } from '../../core/security/crypto.js';
 
 export class PublishingService {
@@ -80,6 +82,7 @@ export class PublishingService {
           postId: post.id,
           draftId: draft.id,
           editorial: draft.editorial,
+          chatId: draft.chatId, // 🚀 BARIS KUNCI: Kirim Chat ID agar Telegram SEO Report tahu tujuan pengiriman!
         });
       } catch (eventError) {
         this.logger.error('Error triggering ARTICLE_PUBLISHED event subscribers', {
