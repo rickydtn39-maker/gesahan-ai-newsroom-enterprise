@@ -1,0 +1,83 @@
+// FILE: src/application/seo/index.js
+
+import { SeoIndexMonitor } from './monitor.js';
+import { SeoValidator } from './validator.js';
+import { SeoScoring } from './scoring.js';
+import { IndexNowService } from './indexnow.js';
+import { SeoAnalyticsLogger } from './logger.js';
+import { SeoTelegramReporter } from './report.js';
+
+export class SeoIntelligenceSuite {
+  constructor(logger, config, kvNamespace, d1Database, telegramApi) {
+    this.logger = logger;
+    this.config = config;
+    
+    // Inisialisasi Service Modular Internal
+    this.monitor = new SeoIndexMonitor(logger, config.seo.sitemapUrl);
+    this.validator = new SeoValidator();
+    this.scoring = new SeoScoring();
+    this.indexNow = new IndexNowService(logger, config.seo.indexNowKey, config.seo.sitemapUrl);
+    this.analyticsLogger = new SeoAnalyticsLogger(logger, kvNamespace, d1Database);
+    this.reporter = new SeoTelegramReporter(telegramApi);
+  }
+
+  async run(eventData) {
+    const { articleUrl, postId, draftId, editorial } = eventData;
+    const chatId = editorial.chatId || eventData.chatId; // Safe fallback path
+
+    this.logger.info('SEO Intelligence Suite v1.0 activated', { postId, articleUrl });
+
+    try {
+      // 1. Submit ke IndexNow (Stage 6)
+      const indexNowResponse = await this.indexNow.submit(articleUrl);
+      const indexNowSuccess = indexNowResponse.success;
+
+      // 2. Tunggu sirkulasi 3 detik & Mulai Audit Monitor (Stage 6)
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      const auditResult = await this.monitor.audit(articleUrl);
+
+      // 3. Validasi SEO Kepatuhan (Stage 6)
+      const validation = this.validator.validate(auditResult, articleUrl);
+
+      // 4. Kalkulasi Skor & Kesehatan (Stage 6)
+      const scoring = this.scoring.calculate(auditResult, indexNowSuccess, validation);
+
+      // 5. Simpan Hasil Monitoring ke Logger Database (Stage 7)
+      const reportPayload = {
+        articleId: draftId,
+        wpPostId: postId,
+        url: articleUrl,
+        publishedAt: new Date().toISOString(),
+        httpStatus: auditResult.httpStatus,
+        sitemapPresent: auditResult.sitemapPresent,
+        canonicalValid: validation.validations.canonical,
+        metaDescValid: validation.validations.metaDescLength,
+        schemaPresent: auditResult.hasNewsArticle,
+        robots: auditResult.robots || 'index,follow',
+        ogPresent: validation.validations.hasOpenGraph,
+        featuredImage: auditResult.featuredImage,
+        altTagsValid: validation.validations.altTagsValid,
+        wordCount: auditResult.wordCount,
+        readingTime: auditResult.readingTime,
+        internalLinks: auditResult.internalLinksCount,
+        externalLinks: auditResult.externalLinksCount,
+        indexNowStatus: indexNowResponse.status,
+        seoScore: scoring.score
+      };
+      await this.analyticsLogger.saveReport(reportPayload);
+
+      // 6. Kirim Laporan ke Telegram Chat Editor (Telegram Report)
+      if (chatId) {
+        await this.reporter.send(chatId, auditResult, validation, scoring, indexNowSuccess, articleUrl);
+      }
+
+      this.logger.info('SEO Intelligence Suite completed analysis successfully', { postId, score: scoring.score });
+    } catch (suiteError) {
+      // Sesuai Spesifikasi: Modul gagal tidak boleh menghentikan fungsionalitas publikasi utama
+      this.logger.error('SEO Intelligence Suite suite executed with errors', {
+        error: suiteError.message,
+        stack: suiteError.stack
+      });
+    }
+  }
+}
