@@ -5,9 +5,9 @@ export class SeoValidator {
     const validations = {
       httpStatus: auditResult.httpStatus === 200,
       canonical: auditResult.canonical === originalUrl,
-      // 🚀 PENYEMPURNAAN ATURAN: Melonggarkan batas atas panjang judul dari 95 menjadi 115 karakter
       titleLength: auditResult.title.length >= 40 && auditResult.title.length <= 115,
-      metaDescLength: auditResult.metaDescription.length >= 100 && auditResult.metaDescription.length <= 200,
+      // 🚀 PENYEMPURNAAN ATURAN: Melonggarkan batas atas meta deskripsi menjadi 240 karakter
+      metaDescLength: auditResult.metaDescription.length >= 100 && auditResult.metaDescription.length <= 240,
       robotsValid: auditResult.robots.includes('index') && auditResult.robots.includes('follow'),
       hasSchema: auditResult.hasNewsArticle,
       hasBreadcrumb: auditResult.hasBreadcrumb,
@@ -23,7 +23,7 @@ export class SeoValidator {
     if (!validations.httpStatus) warnings.push(`HTTP status is ${auditResult.httpStatus}. Expected 200 OK.`);
     if (!validations.canonical) warnings.push('Canonical URL mismatch with the published post address.');
     if (!validations.titleLength) warnings.push(`SEO Title too ${auditResult.title.length < 40 ? 'short' : 'long'} (${auditResult.title.length} chars). Ideal: 40-115.`);
-    if (!validations.metaDescLength) warnings.push(`Meta Description length is ${auditResult.metaDescription.length} chars. Ideal: 100-200.`);
+    if (!validations.metaDescLength) warnings.push(`Meta Description length is ${auditResult.metaDescription.length} chars. Ideal: 100-240.`);
     if (!validations.robotsValid) warnings.push(`Robots tags prevent indexing: "${auditResult.robots || 'None'}"`);
     if (!validations.hasSchema) warnings.push('Missing NewsArticle/Article Schema JSON-LD markup.');
     if (!validations.hasFeaturedImage) warnings.push('Featured Image (og:image) is not defined.');

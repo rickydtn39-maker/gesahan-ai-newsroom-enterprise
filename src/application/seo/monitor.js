@@ -104,8 +104,8 @@ export class SeoIndexMonitor {
 
   extractMainContent(html) {
     const patterns = [
-      /<article[^>]*>([\s\S]*?)<\/article>/i, // Struktur standar HTML5
-      /<div[^>]*class=["']?[^"']*(entry-content|post-content|wp-block-post-content)[^"']*["']?[^>]*>([\s\S]*?)<\/div\s*>/i // Class WordPress Umum
+      /<article[^>]*>([\s\S]*?)<\/article>/i,
+      /<div[^>]*class=["']?[^"']*(entry-content|post-content|wp-block-post-content)[^"']*["']?[^>]*>([\s\S]*?)<\/div\s*>/i
     ];
 
     for (const pattern of patterns) {
@@ -113,7 +113,6 @@ export class SeoIndexMonitor {
       if (match) return match[1];
     }
 
-    // Fallback jika class kustom tidak ditemukan: Ambil area body
     const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
     return bodyMatch ? bodyMatch[1] : html;
   }
@@ -152,7 +151,7 @@ export class SeoIndexMonitor {
       try {
         schemas.push(JSON.parse(match[1].trim()));
       } catch (_e) {
-        // Abaikan JSON-LD yang rusak
+        // Ignored
       }
     }
     return schemas;
@@ -184,7 +183,7 @@ export class SeoIndexMonitor {
     while ((match = regex.exec(html)) !== null) {
       const attrs = match[1];
 
-      // 🚀 FILTER PENGAMAN BARU: Abaikan gambar non-artikel secara cerdas (Avatar/Gravatar, Share Buttons, Logo, Ikon)
+      // 🚀 PENYEMPURNAAN FILTER: Abaikan avatar, ikon, dan gambar spacer transparan (base64 data & gif pixel)
       if (
         attrs.includes('avatar') || 
         attrs.includes('gravatar') || 
@@ -192,9 +191,12 @@ export class SeoIndexMonitor {
         attrs.includes('social') || 
         attrs.includes('icon') || 
         attrs.includes('logo') ||
-        attrs.includes('attachment-thumbnail') // Abaikan gambar thumbnail artikel terkait di bawah
+        attrs.includes('data:image') || // Filter out lazy-load base64 SVGs
+        attrs.includes('spacer') ||     // Filter out spacer images
+        attrs.includes('.gif') ||       // Filter out tracking/blank pixels
+        attrs.includes('attachment-thumbnail')
       ) {
-        continue; // Lewati gambar ini dari audit ALT
+        continue; // Lewati gambar non-konten
       }
 
       total++;

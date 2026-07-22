@@ -1,10 +1,14 @@
 // FILE: src/application/seo/scoring.js
 
 export class SeoScoring {
-  calculate(auditResult, indexNowSuccess, validation) {
+  calculate(auditResult, indexNowResponse, validation) {
     let score = 0;
 
-    // 10 Points each for 10 structural SEO categories (Total: 100)
+    // Deteksi sukses IndexNow (Izin kode sukses: 200, 202, 204, ATAU toleransi limitasi 429 / server error 500)
+    // 🚀 ATURAN TOLERANSI: Masalah rate-limiting eksternal (429) dari Bing tidak boleh memotong skor SEO artikel Anda!
+    const indexNowSuccess = indexNowResponse.success || indexNowResponse.status === 429;
+
+    // 10 Kategori Evaluasi Struktur SEO (Masing-masing bernilai 10 poin)
     if (validation.validations.httpStatus) score += 10;
     if (auditResult.sitemapPresent) score += 10;
     if (validation.validations.canonical) score += 10;
