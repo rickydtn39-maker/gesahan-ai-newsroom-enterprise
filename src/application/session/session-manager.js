@@ -8,7 +8,7 @@ export class SessionManager {
   }
 
   async get(chatId) {
-    const draft = await this.draftRepository.findByChatId(chatId);
+    let draft = await this.draftRepository.findByChatId(chatId);
     if (!draft) return null;
 
     // 🚀 SAFEGUARD: Jika draf tersangkut di state PROCESSING lebih dari 3 menit
@@ -17,9 +17,9 @@ export class SessionManager {
       const now = Date.now();
 
       if (now - lastUpdated > this.MAX_PROCESSING_TIME_MS) {
-        // Otomatis lepaskan kuncian (reset ke IDLE)
-        draft.state = WORKFLOW_STATE.IDLE;
-        await this.save(draft);
+        // Otomatis lepaskan kuncian (reset ke IDLE) dengan meng-copy draft secara aman
+        const resetDraft = draft.copyWith({ state: WORKFLOW_STATE.IDLE });
+        draft = await this.save(resetDraft);
       }
     }
 
@@ -33,20 +33,29 @@ export class SessionManager {
       return existing;
     }
 
-    const draft = createDraft(chatId, userId);
-    draft.createdAt = new Date().toISOString();
-    draft.updatedAt = new Date().toISOString();
+    const initialDraft = createDraft(chatId, userId);
+    
+    // 🚀 Menambahkan timestamp secara imutabel menggunakan copyWith
+    const draftWithTime = initialDraft.copyWith({
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
 
-    await this.draftRepository.save(draft);
+    await this.draftRepository.save(draftWithTime);
 
-    return draft;
+    return draftWithTime;
   }
 
   async save(draft) {
-    if (draft) {
-      draft.updatedAt = new Date().toISOString();
-    }
-    return this.draftRepository.save(draft);
+    if (!draft) return null;
+
+    // 🚀 Update updatedAt secara imutabel sebelum dikirim ke repositori KV
+    const updatedDraft = draft.copyWith({
+      updatedAt: new Date().toISOString(),
+    });
+
+    await this.draftRepository.save(updatedDraft);
+    return updatedDraft;
   }
 
   async cancel(chatId) {

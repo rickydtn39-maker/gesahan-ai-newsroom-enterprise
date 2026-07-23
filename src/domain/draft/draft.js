@@ -1,3 +1,5 @@
+// FILE: src/domain/draft/draft.js
+
 export class Draft {
   constructor({
     id,
@@ -15,6 +17,8 @@ export class Draft {
     stage1 = null,
     angle = null,
     published = null,
+    bufferTimestamp = null, // 🚀 Nilai penunjuk waktu presisi untuk debounce buffer
+    bufferPartCount = null, // 🚀 Jumlah potongan naskah yang berhasil digabungkan
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString(),
   }) {
@@ -27,6 +31,8 @@ export class Draft {
     this.stage1 = stage1;
     this.angle = angle;
     this.published = published;
+    this.bufferTimestamp = bufferTimestamp;
+    this.bufferPartCount = bufferPartCount;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
 
@@ -44,6 +50,8 @@ export class Draft {
       stage1: this.stage1,
       angle: this.angle,
       published: this.published,
+      bufferTimestamp: this.bufferTimestamp,
+      bufferPartCount: this.bufferPartCount,
       createdAt: this.createdAt,
       ...changes,
       updatedAt: new Date().toISOString(),

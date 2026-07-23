@@ -37,11 +37,12 @@ export class WordPressProvider {
   async createTags(tags = [], customAuth = null) {
     if (!tags || tags.length === 0) return [];
 
-    // 🚀 HIGH PERFORMANCE PARALLEL TAG PROCESSING
+    // 🚀 HIGH PERFORMANCE PARALLEL TAG PROCESSING WITH EXACT MATCH VALIDATION
     const tagPromises = tags.map(async (tag) => {
+      const trimmedTag = tag.trim();
       try {
         const search = await fetch(
-          `${this.endpoint}/wp-json/wp/v2/tags?search=${encodeURIComponent(tag)}`,
+          `${this.endpoint}/wp-json/wp/v2/tags?search=${encodeURIComponent(trimmedTag)}`,
           {
             headers: {
               Authorization: this.getAuthorization(customAuth),
@@ -52,16 +53,23 @@ export class WordPressProvider {
         const existing = await search.json();
 
         if (Array.isArray(existing) && existing.length > 0) {
-          return existing[0].id;
+          // 🚀 PROTEKSI CRITICAL: Cari tag yang benar-benar cocok 100% (Case-Insensitive)
+          const exactMatch = existing.find(
+            (t) => t.name.toLowerCase() === trimmedTag.toLowerCase()
+          );
+          if (exactMatch) {
+            return exactMatch.id;
+          }
         }
 
+        // Jika tidak ada kecocokan persis, buat tag baru
         const created = await fetch(`${this.endpoint}/wp-json/wp/v2/tags`, {
           method: 'POST',
           headers: {
             Authorization: this.getAuthorization(customAuth),
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ name: tag }),
+          body: JSON.stringify({ name: trimmedTag }),
         });
 
         if (created.ok) {
@@ -81,10 +89,10 @@ export class WordPressProvider {
   async createPost(editorial, mediaId, customAuth = null) {
     const tagIds = await this.createTags(editorial.seo.tags, customAuth);
 
-    const categoryName = editorial.seo.category ? editorial.seo.category.toUpperCase() : 'BERITA';
+    const categoryName = editorial.seo.category ? editorial.seo.category.trim().toUpperCase() : 'BERITA';
     const categoryId = WORDPRESS_CATEGORY_MAP[categoryName] ?? 1;
 
-    // 🔄 PARSER RESILIEN MULTILINE
+    // 🔄 PARSER RESILIEN MULTILINE UNTUK HEADINGS HTML
     const formattedContent = editorial.article.content
       .replace(/^####\s+(.+?)\r?$/gm, '<h4>$1</h4>')
       .replace(/^###\s+(.+?)\r?$/gm, '<h3>$1</h3>')

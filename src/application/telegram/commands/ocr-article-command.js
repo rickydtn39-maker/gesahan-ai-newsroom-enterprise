@@ -1,3 +1,5 @@
+// FILE: src/application/telegram/commands/ocr-article-command.js
+
 import { WORKFLOW_STATE } from '../../../core/constants/index.js';
 import { TOKENS } from '../../../core/container/tokens.js';
 import { MESSAGES } from '../../../core/constants/messages.js';
@@ -22,7 +24,6 @@ export async function ocrArticleCommand(update, telegramApi, sessionManager, con
     return telegramApi.sendMessage(update.chatId, MESSAGES.OCR.INPUT_INVALID);
   }
 
-  // ✅ DIBERSIHKAN: Mengirim pesan indikator proses OCR (bukan status gagal)
   await telegramApi.sendMessage(update.chatId, '🔍 *Memindai gambar/dokumen (OCR)...* Mohon tunggu sebentar.');
 
   try {
@@ -40,13 +41,14 @@ export async function ocrArticleCommand(update, telegramApi, sessionManager, con
     const editorialService = container.resolve(TOKENS.EDITORIAL_SERVICE);
     const stage1Result = await editorialService.ingestStage1(draftWithSource);
 
-    // ✅ DILENGKAPI: Proteksi Confidence Score
+    // ✅ DILENGKAPI: Proteksi Confidence Score menggunakan Localization Constants
     if (stage1Result.confidence.ocrAccuracy < 90) {
       await sessionManager.cancel(update.chatId);
-      return telegramApi.sendMessage(
-        update.chatId,
-        `⚠️ *Akurasi OCR Rendah (${stage1Result.confidence.ocrAccuracy}%)*\n\nTeks dari gambar terlalu kabur atau tidak terbaca dengan jelas. Silakan kirim ulang gambar dengan kualitas lebih baik atau ketik teks naskah secara manual.`
-      );
+      
+      const rawMessage = MESSAGES.OCR.LOW_ACCURACY || '⚠️ *AKURASI OCR TERLALU RENDAH* ({accuracy}%)\n\nFoto/dokumen yang dikirim buram atau tidak terbaca jelas.';
+      const formattedMessage = rawMessage.replace('{accuracy}', stage1Result.confidence.ocrAccuracy);
+      
+      return telegramApi.sendMessage(update.chatId, formattedMessage);
     }
 
     const updatedDraft = draftWithSource.copyWith({

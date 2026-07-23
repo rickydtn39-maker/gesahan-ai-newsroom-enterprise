@@ -1,3 +1,11 @@
+// FILE: src/application/seo/report.js
+
+// Helper terisolasi untuk mengamankan karakter Markdown dari crash parse Telegram API
+function escapeMarkdown(text) {
+  if (!text) return '';
+  return text.toString().replace(/[_*`[\]]/g, '\\$&');
+}
+
 export class SeoTelegramReporter {
   constructor(telegramApi, logger = null) {
     this.telegramApi = telegramApi;
@@ -15,15 +23,18 @@ export class SeoTelegramReporter {
       return `❌ Failed - ${response.error || 'Connection Timeout'}`;
     };
 
+    const escapedTitle = escapeMarkdown(audit.title || 'Tidak Terdeteksi');
+    const escapedMetaDescription = escapeMarkdown(audit.metaDescription || '');
+
     const message = [
       '📊 *SEO INDEX REPORT*',
       '━━━━━━━━━━━━━━━━━━━━━━━',
       '',
       `📰 *Judul:*`,
-      `_${audit.title || 'Tidak Terdeteksi'}_`,
+      `_${escapedTitle}_`,
       '',
       `🌐 *URL:*`,
-      `${articleUrl}`,
+      `[Klik untuk Membaca](${articleUrl})`,
       '',
       '━━━━━━━━━━━━━━━━━━━━━━━',
       '',
@@ -31,7 +42,7 @@ export class SeoTelegramReporter {
       `Canonical : ${formatStatus(validation.validations.canonical)} ${validation.validations.canonical ? 'Valid' : 'Mismatch'}`,
       `Sitemap : ${formatSitemap(audit.sitemapPresent)}`,
       `Title SEO : ${formatStatus(validation.validations.titleLength)} ${audit.title.length} karakter`,
-      `Meta Description : ${formatStatus(validation.validations.metaDescLength)} ${audit.metaDescription.length} karakter`,
+      `Meta Description : ${formatStatus(validation.validations.metaDescLength)} ${escapedMetaDescription.length} karakter`,
       `Schema : ${formatStatus(validation.validations.hasSchema)} ${audit.hasNewsArticle ? 'NewsArticle' : 'Missing'}`,
       `Breadcrumb : ${formatStatus(validation.validations.hasBreadcrumb)} ${audit.hasBreadcrumb ? 'Valid' : 'Missing'}`,
       `Featured Image : ${formatStatus(validation.validations.hasFeaturedImage)} ${audit.hasFeaturedImage ? 'Detected' : 'Missing'}`,

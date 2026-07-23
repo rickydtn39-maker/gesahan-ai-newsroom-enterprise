@@ -9,7 +9,7 @@ import { newArticleCommand } from './commands/new-article-command.js';
 import { articleCommand } from './commands/article-command.js';
 import { statusCommand } from './commands/status-command.js';
 import { readyPublishCommand } from './commands/ready-publish-command.js';
-import { publishNowCommand } from './commands/publish-now-command.js';
+import { publishNowCommand } from './commands/publish-command.js'; // 🚀 FIXED: Diimpor dari berkas terpusat publish-command.js
 import { rewriteCommand } from './commands/rewrite-command.js';
 import { featuredImageCommand } from './commands/featured-image-command.js';
 import { viewArticleCommand } from './commands/view-article-command.js';
@@ -49,7 +49,7 @@ const registry = new CommandRegistry()
   .registerStatic('✏️ Edit Manual', editCommand)
   .registerStatic('📋 Status', statusCommand)
   .registerStatic('✅ Siap Publish', readyPublishCommand)
-  .registerStatic('🚀 Publish Sekarang', publishNowCommand)
+  .registerStatic('🚀 Publish Sekarang', publishNowCommand) // 🚀 Menggunakan fungsi terpusat
   .registerStatic('♻️ Rewrite Lagi', rewriteCommand)
   .registerStatic('/cancel', cancelCommand)
   .registerStatic('❌ Batal', cancelCommand)
@@ -64,15 +64,10 @@ export async function dispatchTelegramUpdate(update, services) {
     const config = services.container.resolve(TOKENS.CONFIGURATION);
     const whitelistRepo = services.container.resolve(TOKENS.WHITELIST_REPOSITORY);
 
-    // Standardisasi ekstraksi Chat ID, User ID, dan Text dari berbagai payload Telegram
     const chatId = update.chatId || update.message?.chat?.id || update.callback_query?.message?.chat?.id;
     const userId = Number(update.userId || update.message?.from?.id || update.callback_query?.from?.id);
     const text = (update.text || update.message?.text || update.callback_query?.data || '').trim();
 
-    // =========================================================================
-    // 🚀 PENYARING KEAMANAN (SAFETY GUARD CLAUSE)
-    // Abaikan pesan dari grup (ID < 0)
-    // =========================================================================
     if (chatId && Number(chatId) < 0) {
       logger.debug('Ignored group message to prevent session collision', { chatId });
       return;
@@ -90,16 +85,11 @@ export async function dispatchTelegramUpdate(update, services) {
       return services.telegramApi.sendMessage(chatId, MESSAGES.AUTH.UNAUTHORIZED);
     }
 
-    // =========================================================================
-    // 🚨 EMERGENCY RESET BYPASS
-    // Paksa hapus kuncian draf jika pengguna mengirim perintah Batal atau Start
-    // =========================================================================
     if (text === '/cancel' || text === '❌ Batal' || text === '/start' || text === '🏁 Mulai') {
       logger.info('Executing emergency session reset', { command: text, chatId });
       await services.sessionManager.cancel(chatId);
     }
 
-    // Executing Admin Commands
     if (isSuperAdmin) {
       for (const [prefix, handler] of registry.adminCommands.entries()) {
         if (text === prefix || text.startsWith(prefix + ' ')) {
@@ -108,19 +98,16 @@ export async function dispatchTelegramUpdate(update, services) {
       }
     }
 
-    // Author Multi-Author Command
     if (text.startsWith('/setauthor')) {
       return await setAuthorCommand(update, services.telegramApi, whitelistRepo, config);
     }
 
-    // Executing Static Commands
     const staticHandler = registry.staticCommands.get(text);
     if (staticHandler) {
       logger.info('Executing static command', { command: text });
       return await staticHandler(update, services.telegramApi, services.sessionManager, services.container);
     }
 
-    // Executing Dynamic Workflow State
     const draft = await services.sessionManager.get(chatId);
 
     if (update.hasPhoto || update.hasDocument) {
@@ -149,7 +136,6 @@ export async function dispatchTelegramUpdate(update, services) {
     const targetChatId = update.chatId || update.message?.chat?.id || update.callback_query?.message?.chat?.id;
     
     if (targetChatId) {
-      // Bersihkan kuncian sesi agar user tidak tersangkut permanen
       try {
         await services.sessionManager.cancel(targetChatId);
       } catch (e) {

@@ -1,7 +1,14 @@
+// FILE: src/application/telegram/commands/angle-save-command.js
+
 import { WORKFLOW_STATE } from '../../../core/constants/index.js';
 import { TOKENS } from '../../../core/container/tokens.js';
 import { createReviewKeyboard } from '../keyboards/index.js';
 import { MESSAGES } from '../../../core/constants/messages.js';
+
+function escapeMarkdown(text) {
+  if (!text) return '';
+  return text.toString().replace(/[_*`[\]]/g, '\\$&');
+}
 
 export async function angleSaveCommand(update, telegramApi, sessionManager, container) {
   const draft = await sessionManager.get(update.chatId);
@@ -25,7 +32,7 @@ export async function angleSaveCommand(update, telegramApi, sessionManager, cont
     update.chatId,
     isDefaultAi
       ? '⏳ [STAGE 3 & 4] GPT Redaktur Pelaksana sedang menyunting draf & melakukan QC mandiri...'
-      : `⏳ [STAGE 3 & 4] GPT Redaktur Pelaksana sedang menyunting draf dengan fokus angle "${selectedAngle}" & melakukan QC...`
+      : `⏳ [STAGE 3 & 4] GPT Redaktur Pelaksana sedang menyunting draf dengan fokus angle "${escapeMarkdown(selectedAngle)}" & melakukan QC...`
   );
 
   try {
@@ -39,6 +46,13 @@ export async function angleSaveCommand(update, telegramApi, sessionManager, cont
 
     await sessionManager.save(completedDraft);
 
+    // Escape seluruh variabel dinamis sebelum dicetak ke Markdown Parser Telegram
+    const escapedTitle = escapeMarkdown(result.article.title);
+    const escapedLead = escapeMarkdown(result.article.lead);
+    const escapedSlug = escapeMarkdown(result.seo.slug);
+    const escapedKeyword = escapeMarkdown(result.seo.focusKeyword);
+    const escapedCategory = escapeMarkdown(result.seo.category);
+
     return telegramApi.sendMessage(
       update.chatId,
       [
@@ -48,21 +62,21 @@ export async function angleSaveCommand(update, telegramApi, sessionManager, cont
         '',
         '📰 JUDUL',
         '',
-        result.article.title,
+        escapedTitle,
         '',
         '━━━━━━━━━━━━━━━━━━',
         '',
         '📝 LEAD',
         '',
-        result.article.lead,
+        escapedLead,
         '',
         '━━━━━━━━━━━━━━━━━━',
         '',
         '🔍 SEO',
         '',
-        `Slug : ${result.seo.slug}`,
-        `Keyword : ${result.seo.focusKeyword}`,
-        `Kategori : ${result.seo.category}`,
+        `Slug : ${escapedSlug}`,
+        `Keyword : ${escapedKeyword}`,
+        `Kategori : ${escapedCategory}`,
         '',
         '━━━━━━━━━━━━━━━━━━',
         '',
@@ -77,7 +91,7 @@ export async function angleSaveCommand(update, telegramApi, sessionManager, cont
         '📋 QC PASSED REPORT',
         '',
         ...(result.quality.notes.length > 0
-          ? result.quality.notes.map((note) => `• ${note}`)
+          ? result.quality.notes.map((note) => `• ${escapeMarkdown(note)}`)
           : ['• Pemeriksaan QC Selesai, fakta 100% konsisten.']),
         '',
         '━━━━━━━━━━━━━━━━━━',

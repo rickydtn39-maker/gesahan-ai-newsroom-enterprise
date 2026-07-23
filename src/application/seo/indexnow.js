@@ -42,21 +42,21 @@ export class IndexNowService {
           body: JSON.stringify(payload),
         });
 
-        // IndexNow mengembalikan 200, 202, atau 204 untuk sukses
         if (response.ok) {
           this.logger.info('IndexNow submission successful', { articleUrl, status: response.status });
           return { success: true, status: response.status, error: null };
         }
 
-        // Petakan status error IndexNow secara spesifik
         const errorDetails = this.mapHttpStatus(response.status);
-        throw new Error(errorDetails);
+        const errorInstance = new Error(errorDetails);
+        errorInstance.status = response.status; // 🚀 Menyimpan status aslinya langsung tanpa parsing string
+        throw errorInstance;
 
       } catch (error) {
         this.logger.warn(`IndexNow submission failed on attempt ${attempt}`, { error: error.message });
         
         if (attempt === maxRetries) {
-          const status = parseInt(error.message) || 500;
+          const status = error.status || 500;
           return { 
             success: false, 
             status: status, 

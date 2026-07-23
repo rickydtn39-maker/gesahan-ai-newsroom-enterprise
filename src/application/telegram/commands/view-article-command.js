@@ -1,4 +1,11 @@
+// FILE: src/application/telegram/commands/view-article-command.js
+
 import { MESSAGES } from '../../../core/constants/messages.js';
+
+function escapeMarkdown(text) {
+  if (!text) return '';
+  return text.toString().replace(/[_*`[\]]/g, '\\$&');
+}
 
 export async function viewArticleCommand(update, telegramApi, sessionManager) {
   const draft = await sessionManager.get(update.chatId);
@@ -13,21 +20,23 @@ export async function viewArticleCommand(update, telegramApi, sessionManager) {
 
   const article = draft.editorial.article;
 
-  // 🔄 PARSER RESILIEN MULTILINE: Deteksi tanda #, ##, ###, atau #### lalu ubah menjadi bold di Telegram
-  const cleanContent = article.content.replace(/^#{1,4}\s+(.+?)\r?$/gm, '*■ $1*');
+  // 🚀 LANGKAH PENGAMANAN SANGAT KETAT: Escape karakter Markdown bawaan teks rilis,
+  // baru kemudian ubah headings Markdown (#) menjadi Bold khusus di Telegram (*■ Heading*)
+  const cleanContent = escapeMarkdown(article.content)
+    .replace(/^#{1,4}\s+(.+?)\r?$/gm, '*■ $1*');
 
   return telegramApi.sendMessage(
     update.chatId,
     [
       '📰 *JUDUL*',
       '',
-      article.title,
+      escapeMarkdown(article.title),
       '',
       '━━━━━━━━━━━━━━━━━━',
       '',
       '📝 *LEAD*',
       '',
-      article.lead,
+      escapeMarkdown(article.lead),
       '',
       '━━━━━━━━━━━━━━━━━━',
       '',
