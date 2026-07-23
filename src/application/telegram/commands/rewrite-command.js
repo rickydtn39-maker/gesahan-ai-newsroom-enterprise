@@ -1,7 +1,8 @@
+// FILE: src/application/telegram/commands/rewrite-command.js
+
 import { WORKFLOW_STATE } from '../../../core/constants/index.js';
-import { TOKENS } from '../../../core/container/tokens.js';
-import { createReviewKeyboard } from '../keyboards/index.js';
 import { MESSAGES } from '../../../core/constants/messages.js';
+import { QueueManager } from '../../../infrastructure/queue/queue-manager.js'; // 🚀 Impor Queue Manager
 
 export async function rewriteCommand(update, telegramApi, sessionManager, container) {
   const draft = await sessionManager.get(update.chatId);
@@ -17,77 +18,16 @@ export async function rewriteCommand(update, telegramApi, sessionManager, contai
     );
   }
 
+  const lockedDraft = draft.copyWith({
+    state: WORKFLOW_STATE.EDITORIAL_PROCESSING,
+  });
+  await sessionManager.save(lockedDraft);
+
   await telegramApi.sendMessage(
     update.chatId,
     '⏳ Menginstruksikan AI untuk menulis ulang artikel dari naskah asli...'
   );
 
-  try {
-    const editorialService = container.resolve(TOKENS.EDITORIAL_SERVICE);
-    const result = await editorialService.generate(draft, draft.stage1);
-
-    const updatedDraft = draft.copyWith({
-      editorial: result,
-    });
-
-    await sessionManager.save(updatedDraft);
-
-    return telegramApi.sendMessage(
-      update.chatId,
-      [
-        '✅ AI berhasil menyusun ulang artikel.',
-        '',
-        '━━━━━━━━━━━━━━━━━━',
-        '',
-        '📰 JUDUL (REWRITE)',
-        '',
-        result.article.title,
-        '',
-        '━━━━━━━━━━━━━━━━━━',
-        '',
-        '📝 LEAD',
-        '',
-        result.article.lead,
-        '',
-        '━━━━━━━━━━━━━━━━━━',
-        '',
-        '🔍 SEO',
-        '',
-        `Slug : ${result.seo.slug}`,
-        `Keyword : ${result.seo.focusKeyword}`,
-        `Kategori : ${result.seo.category}`,
-        '',
-        '━━━━━━━━━━━━━━━━━━',
-        '',
-        '📊 STATISTIK',
-        '',
-        `Jumlah Kata : ${result.statistics.wordCount}`,
-        `Estimasi Baca : ${result.statistics.readingTime} menit`,
-        `Editorial Score : ${result.quality.score}/100`,
-        '',
-        '━━━━━━━━━━━━━━━━━━',
-        '',
-        '📋 CATATAN EDITOR',
-        '',
-        ...(result.quality.notes.length > 0
-          ? result.quality.notes.map((note) => `• ${note}`)
-          : ['• Tidak ada catatan.']),
-        '',
-        '━━━━━━━━━━━━━━━━━━',
-        '',
-        '📄 Gunakan tombol "Lihat Artikel Lengkap" untuk membaca hasil terbaru.',
-        '',
-        'Silakan pilih tindakan berikut.',
-      ].join('\n'),
-      createReviewKeyboard()
-    );
-  } catch (error) {
-    return telegramApi.sendMessage(
-      update.chatId,
-      ['⚠ AI gagal menulis ulang naskah.', '', error.message, '', 'Silakan coba kembali.'].join(
-        '\n'
-      ),
-      createReviewKeyboard()
-    );
-  }
+  // 🚀 MASUKKAN PROSES REWRITE GPT-4o KE QUEUE MANAGER (ANTREAN)
+  await QueueManager.add(update.chatId, update.userId, 'STAGE_3_GENERATE', {}, container);
 }

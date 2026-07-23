@@ -15,10 +15,11 @@ export class Draft {
     },
     editorial = null,
     stage1 = null,
+    stage1Multi = null, // 🚀 FIXED: Menambahkan properti stage1Multi agar tersimpan permanen di KV
     angle = null,
     published = null,
-    bufferTimestamp = null, // 🚀 Nilai penunjuk waktu presisi untuk debounce buffer
-    bufferPartCount = null, // 🚀 Jumlah potongan naskah yang berhasil digabungkan
+    bufferTimestamp = null,
+    bufferPartCount = null,
     createdAt = new Date().toISOString(),
     updatedAt = new Date().toISOString(),
   }) {
@@ -29,6 +30,7 @@ export class Draft {
     this.source = source;
     this.editorial = editorial;
     this.stage1 = stage1;
+    this.stage1Multi = stage1Multi; // 🚀 FIXED: Bind ke instansi objek
     this.angle = angle;
     this.published = published;
     this.bufferTimestamp = bufferTimestamp;
@@ -48,6 +50,7 @@ export class Draft {
       source: this.source,
       editorial: this.editorial,
       stage1: this.stage1,
+      stage1Multi: this.stage1Multi, // 🚀 FIXED: Pertahankan data saat disalin
       angle: this.angle,
       published: this.published,
       bufferTimestamp: this.bufferTimestamp,

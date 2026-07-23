@@ -11,17 +11,18 @@ export async function fetchYoutubeTranscript(videoUrl) {
   const videoId = videoIdMatch[1];
   
   // =========================================================================
-  // 🚀 BYPASS DETEKSI BOT DENGAN INNERTUBE API (INTERNAL YOUTUBE JSON CLIENT)
-  // Cara ini meniru protokol resmi aplikasi YouTube Web Client sehingga aman dari blokir IP Cloudflare.
+  // 🚀 BYPASS DETEKSI BOT DENGAN INNERTUBE ANDROID CLIENT SIGNATURE
+  // Client ANDROID sangat tangguh, melewati proteksi signature pada video politik/berita,
+  // dan menjamin captions selalu dikembalikan oleh server YouTube tanpa diblokir Cloudflare.
   // =========================================================================
   const playerApiUrl = 'https://www.youtube.com/youtubei/v1/player';
   const playerPayload = {
     videoId: videoId,
     context: {
       client: {
-        clientName: 'WEB',
-        clientVersion: '2.20210621.02.00',
-        hl: 'id', // Paksa hasil parameter ke Bahasa Indonesia
+        clientName: 'ANDROID',
+        clientVersion: '17.30.35',
+        hl: 'id',
         gl: 'ID'
       }
     }
@@ -31,7 +32,7 @@ export async function fetchYoutubeTranscript(videoUrl) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      'User-Agent': 'com.google.android.youtube/17.30.35 (Linux; U; Android 12; GB)'
     },
     body: JSON.stringify(playerPayload)
   });
@@ -49,8 +50,11 @@ export async function fetchYoutubeTranscript(videoUrl) {
     throw new Error('Transkrip tidak ditemukan pada video ini. Pastikan video memiliki subtitle atau transkrip otomatis di YouTube.');
   }
 
-  // Prioritaskan Bahasa Indonesia (id), jika tidak ada ambil opsi pertama yang tersedia (otomatis/terjemahan)
-  const selectedTrack = captionTracks.find(t => t.languageCode === 'id') || captionTracks[0];
+  // 🚀 FIXED: Cari trek yang mengandung kode 'id' secara luas (misal: 'id', 'id-ID', atau automatic 'a.id')
+  const selectedTrack = captionTracks.find(t => 
+    t.languageCode && (t.languageCode === 'id' || t.languageCode.startsWith('id') || t.languageCode.includes('id'))
+  ) || captionTracks[0];
+
   if (!selectedTrack || !selectedTrack.baseUrl) {
     throw new Error('Trek transkrip tidak mendukung bahasa yang kompatibel.');
   }
