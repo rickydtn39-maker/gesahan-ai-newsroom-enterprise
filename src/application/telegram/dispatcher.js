@@ -23,7 +23,7 @@ import { setAuthorCommand } from './commands/setauthor-command.js';
 import { themeSelectionCommand } from './commands/theme-selection-command.js';
 
 import { addUserCommand, delUserCommand, listUsersCommand } from './commands/admin-commands.js';
-import { createMainKeyboard } from './keyboards/index.js'; // 🚀 Impor keyboard utama
+import { createMainKeyboard } from './keyboards/index.js';
 
 class CommandRegistry {
   constructor() {
@@ -89,9 +89,6 @@ export async function dispatchTelegramUpdate(update, services) {
       return services.telegramApi.sendMessage(chatId, MESSAGES.AUTH.UNAUTHORIZED);
     }
 
-    // =========================================================================
-    // 🏁 DETEKSI SINKRONISASI PENUTUPAN SESI PODCAST PERSISTEN
-    // =========================================================================
     if (text === '🏁 Selesai & Tutup') {
       logger.info('Closing multi-theme session', { chatId });
       await services.sessionManager.cancel(chatId);
@@ -165,7 +162,7 @@ export async function dispatchTelegramUpdate(update, services) {
 
       return services.telegramApi.sendMessage(
         targetChatId,
-        '⚠️ <b>Terjadi kesalahan sistem internal.</b>\nSesi Anda telah direset otomatis. Silakan kirimkan kembali perintah Anda atau ketik /start.'
+        '⚠️ *Terjadi kesalahan sistem internal.*\nSesi Anda telah direset otomatis. Silakan kirimkan kembali perintah Anda atau ketik /start.'
       );
     }
   }

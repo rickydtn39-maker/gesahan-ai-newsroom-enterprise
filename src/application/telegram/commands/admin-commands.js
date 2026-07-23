@@ -36,7 +36,7 @@ export async function addUserCommand(update, telegramApi, whitelistRepository) {
 
     return telegramApi.sendMessage(
       update.chatId,
-      `✅ *PENGGUNA BERHASIL DITAMBAHKAN!*\n\n• *Nama:* ${name}\n• *ID:* \`${targetId}\`\n\nKini Budi sudah bisa langsung menggunakan GESAHAN AI Newsroom.`
+      `✅ *PENGGUNA BERHASIL DITAMBAHKAN!*\n\n• *Nama:* ${name}\n• *ID:* \`${targetId}\`\n\nKini ${name} sudah bisa langsung menggunakan GESAHAN AI Newsroom.`
     );
   } catch (error) {
     return telegramApi.sendMessage(

@@ -1,41 +1,49 @@
-// FILE: src/application/telegram/commands/theme-selection-command.js
-
 import { WORKFLOW_STATE } from '../../../core/constants/index.js';
 import { createAngleKeyboard } from '../keyboards/index.js';
 
 export async function themeSelectionCommand(update, telegramApi, sessionManager) {
   const draft = await sessionManager.get(update.chatId);
-
   if (!draft || draft.state !== WORKFLOW_STATE.WAITING_THEME_SELECTION) {
-    return telegramApi.sendMessage(update.chatId, 'Sistem tidak sedang dalam mode pemilihan tema berita.');
+    return telegramApi.sendMessage(update.chatId, 'Sistem tidak sedang menunggu pemilihan tema.');
   }
 
-  const textInput = (update.text || '').trim();
-  const match = textInput.match(/Tema (\d+):/i);
+  const text = (update.text || '').trim();
 
+  // Mencocokkan ID tema dari teks tombol: "🎯 Tema 1: Judul Pembahasan..."
+  const match = text.match(/🎯\s*Tema\s*(\d+):/i);
   if (!match) {
     return telegramApi.sendMessage(
       update.chatId,
-      '⚠️ Pilihan tidak valid. Silakan klik salah satu tombol tema yang tersedia.'
+      '⚠️ Pilihan tidak valid. Silakan pilih salah satu tema pada tombol menu di bawah.'
     );
   }
 
-  const selectedIndex = parseInt(match[1]) - 1;
+  const themeId = parseInt(match[1], 10);
   const themes = draft.stage1Multi?.themes || [];
+  const selectedTheme = themes.find((t) => t.id === themeId);
 
-  if (selectedIndex < 0 || selectedIndex >= themes.length) {
+  if (!selectedTheme) {
     return telegramApi.sendMessage(
       update.chatId,
-      '❌ Tema yang Anda pilih tidak ditemukan di database draf.'
+      '❌ Tema yang Anda pilih tidak ditemukan atau sudah diproses. Silakan pilih tema yang tersedia.'
     );
   }
 
-  const selectedThemeData = themes[selectedIndex];
+  // Petakan tema terpilih ke skema tunggal Stage 1
+  const stage1Result = {
+    extractedInfo: selectedTheme.extractedInfo,
+    seo: selectedTheme.seo,
+    wordpress: selectedTheme.wordpress,
+    newsValue: selectedTheme.newsValue,
+    priority: selectedTheme.priority,
+    confidence: selectedTheme.confidence,
+    draftReporter: selectedTheme.draftReporter,
+    id: selectedTheme.id, // Amankan ID tema untuk proses eliminasi saat sukses terbit
+  };
 
-  // Amankan data tema terpilih ke draf utama, dan ubah status ke WAITING_ANGLE
   const updatedDraft = draft.copyWith({
     state: WORKFLOW_STATE.WAITING_ANGLE,
-    stage1: selectedThemeData, // Masuk ke pipeline normal draf tunggal
+    stage1: stage1Result,
   });
 
   await sessionManager.save(updatedDraft);
@@ -49,16 +57,16 @@ export async function themeSelectionCommand(update, telegramApi, sessionManager)
   return telegramApi.sendMessage(
     update.chatId,
     [
-      `🎯 *TEMA ${selectedIndex + 1} BERHASIL DIPILIH!*`,
+      `🎯 *TEMA BERHASIL DIPILIH: Tema ${selectedTheme.id}*`,
       '━━━━━━━━━━━━━━━━━━',
-      `🏷️ *Kategori:* ${selectedThemeData.wordpress.category}`,
-      `🔑 *Keyword:* ${selectedThemeData.seo.focusKeyword}`,
-      `🚨 *Prioritas:* ${priorityIcons[selectedThemeData.priority] || selectedThemeData.priority}`,
-      `📈 *News Score:* ${selectedThemeData.newsValue.score}/100`,
-      `🎯 *Draf Reporter:* "${selectedThemeData.draftReporter.title}"`,
+      `🏷️ *Kategori:* ${selectedTheme.wordpress.category}`,
+      `🔑 *Keyword:* ${selectedTheme.seo.focusKeyword}`,
+      `🚨 *Prioritas:* ${priorityIcons[selectedTheme.priority] || selectedTheme.priority}`,
+      `📈 *News Score:* ${selectedTheme.newsValue.score}/100`,
+      `🎯 *Draf Sementara Reporter:* "${selectedTheme.draftReporter.title}"`,
       '━━━━━━━━━━━━━━━━━━',
       '',
-      '✍ *STAGE 2: TENTUKAN SUDUT PANDANG (ANGLE)*',
+      '✍️ *STAGE 2: TENTUKAN SUDUT PANDANG (ANGLE)*',
       'Silakan ketik angle khusus Anda atau klik tombol di bawah untuk default AI.',
     ].join('\n'),
     createAngleKeyboard()

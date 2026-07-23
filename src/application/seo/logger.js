@@ -4,7 +4,7 @@ export class SeoAnalyticsLogger {
   constructor(logger, kvNamespace, d1Database = null) {
     this.logger = logger;
     this.kvNamespace = kvNamespace;
-    this.d1Database = d1Database; // Option for advanced analytics via Cloudflare D1
+    this.d1Database = d1Database; // Opsi untuk analisis tingkat lanjut via Cloudflare D1
   }
 
   async saveReport(reportPayload) {
@@ -18,8 +18,8 @@ export class SeoAnalyticsLogger {
       }));
       this.logger.info('SEO Report archived in KV Storage', { key });
 
-      // 2. Simpan di Cloudflare D1 (Jika D1 SQL terikat di Environment)
-      if (this.d1Database) {
+      // 2. Simpan di Cloudflare D1 (Jika D1 SQL terikat di Environment dan tipenya valid)
+      if (this.d1Database && typeof this.d1Database.prepare === 'function') {
         await this.d1Database.prepare(`
           INSERT OR REPLACE INTO seo_reports (
             article_id, wp_post_id, url, published_at, http_status, 
