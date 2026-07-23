@@ -8,7 +8,7 @@ import { createThemeSelectionKeyboard } from '../keyboards/index.js';
 import { fetchYoutubeTranscript } from '../../../infrastructure/providers/youtube/youtube-transcript.js';
 import { getYoutubePassTemplate } from '../../editorial/prompt/templates/youtube-pass-template.js';
 import { WORDPRESS_CATEGORY_MAP } from '../../../infrastructure/providers/wordpress/category-map.js';
-import { QueueManager } from '../../../infrastructure/queue/queue-manager.js'; // 🚀 Impor Queue Manager
+import { QueueManager } from '../../../infrastructure/queue/queue-manager.js';
 
 export async function articleCommand(update, telegramApi, sessionManager, container) {
   let state = await sessionManager.getState(update.chatId);
@@ -39,7 +39,11 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
     );
 
     try {
-      const transcriptText = await fetchYoutubeTranscript(incomingText);
+      // Ambil env dari container secara dinamis untuk AssemblyAI Key
+      const env = container.has('env') ? container.resolve('env') : {};
+      
+      // Ambil transkrip dengan meneruskan objek env ke sistem dual-engine
+      const transcriptText = await fetchYoutubeTranscript(incomingText, env);
       const logger = container.resolve(TOKENS.LOGGER);
       logger.info('YouTube transcript fetched successfully', { chatId: update.chatId });
 
@@ -228,7 +232,6 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
 
     await telegramApi.sendMessage(chatId, MESSAGES.WORKFLOW.STAGE1_LOADING);
 
-    // 🚀 MASUKKAN PROSES ANALISIS GEMINI KE QUEUE MANAGER (ANTREAN)
     await QueueManager.add(chatId, update.userId, 'STAGE_1_INGEST', {}, container);
   };
 

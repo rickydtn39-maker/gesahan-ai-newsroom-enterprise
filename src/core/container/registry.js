@@ -24,14 +24,14 @@ import { SeoIntelligenceSuite } from '../../application/seo/index.js';
 import { Container } from './container.js';
 import { TOKENS } from './tokens.js';
 
-// 🚀 MENERIMA CTX SECARA DINAMIS
 export function createContainer(configuration, env, ctx = null, correlationId = null) {
   const container = new Container();
 
   container.registerInstance(TOKENS.CONFIGURATION, configuration);
   
-  // 🚀 DAFTARKAN RUNTIME CTX UNTUK BACKGROUND TASK SHIELDING
+  // 🚀 DAFTARKAN RUNTIME CTX & ENV UNTUK AKSES GLOBAL
   container.registerInstance('ctx', ctx);
+  container.registerInstance('env', env);
 
   container.registerFactory(TOKENS.LOGGER, () => createLogger(correlationId));
   container.registerFactory(TOKENS.METRICS, (c) => new MetricsService(c.resolve(TOKENS.LOGGER)));
