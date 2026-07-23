@@ -1,6 +1,7 @@
 // FILE: src/infrastructure/providers/youtube/youtube-transcript.js
 
 export async function fetchYoutubeTranscript(videoUrl) {
+  // 1. Ekstrak Video ID menggunakan Regular Expression yang presisi
   const videoIdMatch = videoUrl.match(
     /(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i
   );
@@ -9,49 +10,68 @@ export async function fetchYoutubeTranscript(videoUrl) {
   }
   const videoId = videoIdMatch[1];
   
-  const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7'
+  // =========================================================================
+  // 🚀 BYPASS DETEKSI BOT DENGAN INNERTUBE API (INTERNAL YOUTUBE JSON CLIENT)
+  // Cara ini meniru protokol resmi aplikasi YouTube Web Client sehingga aman dari blokir IP Cloudflare.
+  // =========================================================================
+  const playerApiUrl = 'https://www.youtube.com/youtubei/v1/player';
+  const playerPayload = {
+    videoId: videoId,
+    context: {
+      client: {
+        clientName: 'WEB',
+        clientVersion: '2.20210621.02.00',
+        hl: 'id', // Paksa hasil parameter ke Bahasa Indonesia
+        gl: 'ID'
+      }
     }
+  };
+
+  const response = await fetch(playerApiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    },
+    body: JSON.stringify(playerPayload)
   });
-  
+
   if (!response.ok) {
-    throw new Error('Gagal mengakses halaman video YouTube.');
+    throw new Error(`Koneksi Innertube API gagal dengan status HTTP ${response.status}`);
   }
+
+  const playerData = await response.json();
   
-  const html = await response.text();
+  // 2. Cari jalur trek caption/subtitles dari data player JSON
+  const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
   
-  // Mencari JSON player response yang berisi data trek subtitle
-  const regex = /"captionTracks":\s*(\[[^\]]+\])/;
-  const match = html.match(regex);
-  if (!match) {
-    throw new Error('Transkrip tidak ditemukan pada video ini. Pastikan video memiliki subtitle atau transkrip otomatis.');
+  if (!captionTracks || !Array.isArray(captionTracks) || captionTracks.length === 0) {
+    throw new Error('Transkrip tidak ditemukan pada video ini. Pastikan video memiliki subtitle atau transkrip otomatis di YouTube.');
   }
-  
-  const captionTracks = JSON.parse(match[1]);
-  // Prioritaskan Bahasa Indonesia (id), jika tidak ada ambil trek pertama yang tersedia
-  const track = captionTracks.find(t => t.languageCode === 'id') || captionTracks[0];
-  if (!track || !track.baseUrl) {
-    throw new Error('Trek bahasa transkrip tidak ditemukan.');
+
+  // Prioritaskan Bahasa Indonesia (id), jika tidak ada ambil opsi pertama yang tersedia (otomatis/terjemahan)
+  const selectedTrack = captionTracks.find(t => t.languageCode === 'id') || captionTracks[0];
+  if (!selectedTrack || !selectedTrack.baseUrl) {
+    throw new Error('Trek transkrip tidak mendukung bahasa yang kompatibel.');
   }
-  
-  const xmlRes = await fetch(track.baseUrl);
-  if (!xmlRes.ok) {
-    throw new Error('Gagal mengunduh berkas transkrip XML dari server YouTube.');
+
+  // 3. Unduh berkas XML timed-text transkrip asli dari CDN Google Video
+  const xmlResponse = await fetch(selectedTrack.baseUrl);
+  if (!xmlResponse.ok) {
+    throw new Error('Gagal mengunduh data teks subtitle dari CDN Google.');
   }
-  
-  const xmlText = await xmlRes.text();
-  
-  // Ekstrak baris-baris teks dari tag XML menggunakan regex berkinerja tinggi
+
+  const xmlText = await xmlResponse.text();
+
+  // 4. Ekstrak baris dialog dari tag XML menggunakan regex berkinerja tinggi
   const textMatches = xmlText.match(/<text[^>]*>([\s\S]*?)<\/text>/gi);
   if (!textMatches) {
-    throw new Error('Berkas transkrip kosong atau tidak dapat diurai.');
+    throw new Error('Teks transkrip kosong atau tidak dapat diurai.');
   }
-  
+
   return textMatches.map(m => {
     const content = m.replace(/<text[^>]*>([\s\S]*?)<\/text>/i, '$1');
-    // Dekode entitas HTML dasar agar teks terbaca rapi
+    // Dekode entitas HTML dasar agar teks terbaca rapi dan bersih
     return content
       .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
