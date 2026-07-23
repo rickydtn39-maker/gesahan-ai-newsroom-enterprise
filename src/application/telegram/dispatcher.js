@@ -1,3 +1,5 @@
+// FILE: src/application/telegram/dispatcher.js
+
 import { WORKFLOW_STATE } from '../../core/constants/index.js';
 import { TOKENS } from '../../core/container/tokens.js';
 import { MESSAGES } from '../../core/constants/messages.js';
@@ -9,7 +11,7 @@ import { newArticleCommand } from './commands/new-article-command.js';
 import { articleCommand } from './commands/article-command.js';
 import { statusCommand } from './commands/status-command.js';
 import { readyPublishCommand } from './commands/ready-publish-command.js';
-import { publishNowCommand } from './commands/publish-command.js'; // 🚀 FIXED: Diimpor dari berkas terpusat publish-command.js
+import { publishNowCommand } from './commands/publish-command.js';
 import { rewriteCommand } from './commands/rewrite-command.js';
 import { featuredImageCommand } from './commands/featured-image-command.js';
 import { viewArticleCommand } from './commands/view-article-command.js';
@@ -18,8 +20,10 @@ import { manualEditSaveCommand } from './commands/manual-edit-save-command.js';
 import { ocrArticleCommand } from './commands/ocr-article-command.js';
 import { angleSaveCommand } from './commands/angle-save-command.js';
 import { setAuthorCommand } from './commands/setauthor-command.js';
+import { themeSelectionCommand } from './commands/theme-selection-command.js';
 
 import { addUserCommand, delUserCommand, listUsersCommand } from './commands/admin-commands.js';
+import { createMainKeyboard } from './keyboards/index.js'; // 🚀 Impor keyboard utama
 
 class CommandRegistry {
   constructor() {
@@ -49,7 +53,7 @@ const registry = new CommandRegistry()
   .registerStatic('✏️ Edit Manual', editCommand)
   .registerStatic('📋 Status', statusCommand)
   .registerStatic('✅ Siap Publish', readyPublishCommand)
-  .registerStatic('🚀 Publish Sekarang', publishNowCommand) // 🚀 Menggunakan fungsi terpusat
+  .registerStatic('🚀 Publish Sekarang', publishNowCommand)
   .registerStatic('♻️ Rewrite Lagi', rewriteCommand)
   .registerStatic('/cancel', cancelCommand)
   .registerStatic('❌ Batal', cancelCommand)
@@ -85,6 +89,19 @@ export async function dispatchTelegramUpdate(update, services) {
       return services.telegramApi.sendMessage(chatId, MESSAGES.AUTH.UNAUTHORIZED);
     }
 
+    // =========================================================================
+    // 🏁 DETEKSI SINKRONISASI PENUTUPAN SESI PODCAST PERSISTEN
+    // =========================================================================
+    if (text === '🏁 Selesai & Tutup') {
+      logger.info('Closing multi-theme session', { chatId });
+      await services.sessionManager.cancel(chatId);
+      return await services.telegramApi.sendMessage(
+        chatId,
+        '✅ *Sesi Podcast Berhasil Ditutup.*\n\nSisa draf tema telah dibersihkan secara aman dari database. Silakan klik menu di bawah untuk memulai kembali.',
+        createMainKeyboard()
+      );
+    }
+
     if (text === '/cancel' || text === '❌ Batal' || text === '/start' || text === '🏁 Mulai') {
       logger.info('Executing emergency session reset', { command: text, chatId });
       await services.sessionManager.cancel(chatId);
@@ -109,6 +126,10 @@ export async function dispatchTelegramUpdate(update, services) {
     }
 
     const draft = await services.sessionManager.get(chatId);
+
+    if (draft?.state === WORKFLOW_STATE.WAITING_THEME_SELECTION) {
+      return await themeSelectionCommand(update, services.telegramApi, services.sessionManager);
+    }
 
     if (update.hasPhoto || update.hasDocument) {
       if (draft?.state === WORKFLOW_STATE.WAITING_FEATURED_IMAGE && update.hasPhoto) {

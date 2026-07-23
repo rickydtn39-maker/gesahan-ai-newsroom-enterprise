@@ -1,3 +1,5 @@
+// FILE: src/core/constants/workflow.js
+
 export const WORKFLOW_STATE = Object.freeze({
   IDLE: 'IDLE',
 
@@ -20,4 +22,7 @@ export const WORKFLOW_STATE = Object.freeze({
   COMPLETED: 'COMPLETED',
 
   CANCELLED: 'CANCELLED',
+
+  // 🚀 STATUS BARU UNTUK SELEKSI MULTI-TEMA NOTEBOOKLM
+  WAITING_THEME_SELECTION: 'WAITING_THEME_SELECTION',
 });

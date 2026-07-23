@@ -1,7 +1,7 @@
 // FILE: src/application/telegram/commands/publish-command.js
 
 import { TOKENS } from '../../../core/container/tokens.js';
-import { createMainKeyboard } from '../keyboards/index.js';
+import { createMainKeyboard, createThemeSelectionKeyboard } from '../keyboards/index.js';
 
 function escapeMarkdown(text) {
   if (!text) return '';
@@ -54,7 +54,7 @@ export async function publishNowCommand(update, telegramApi, sessionManager, con
         authorName = author.name;
       }
     } catch (_err) {
-      // Fallback aman jika whitelist tidak dapat dibaca
+      // Fallback aman
     }
 
     // =========================================================================
@@ -83,12 +83,15 @@ export async function publishNowCommand(update, telegramApi, sessionManager, con
     logger.info('Publishing process successfully completed.', analyticsLog);
     metrics.increment('publishing_completed', 1, { priority: draft.stage1.priority });
 
-    // Sesi aktif ditutup (Arsip memori ditangani aman di dalam PublishingService)
-    await sessionManager.cancel(update.chatId);
+    // =========================================================================
+    // 🧠 DETEKSI PERSISTENSI LOOP MULTI-TEMA (NOTEBOOKLM ADVANCED FILTER)
+    // =========================================================================
+    const publishedThemeId = draft.stage1?.id;
+    let remainingThemes = [];
+    if (draft.stage1Multi?.themes) {
+      remainingThemes = draft.stage1Multi.themes.filter(t => t.id !== publishedThemeId);
+    }
 
-    // =========================================================================
-    // TELEGRAM BROADCAST PAYLOAD
-    // =========================================================================
     const escapedTitle = escapeMarkdown(draft.editorial.article.title);
     const escapedAuthor = escapeMarkdown(authorName);
     const escapedCategory = escapeMarkdown(draft.editorial.seo.category);
@@ -109,22 +112,44 @@ export async function publishNowCommand(update, telegramApi, sessionManager, con
       '━━━━━━━━━━━━━━━━━━',
     ].join('\n');
 
-    // 1. Kirim Laporan ke Wartawan (Private Chat)
+    // JIKA MASIH ADA TEMA YANG BELUM DIPUBLIKASIKAN: Putar kembali ke layar seleksi
+    if (remainingThemes.length > 0) {
+      const updatedMultiDraft = draft.copyWith({
+        state: 'WAITING_THEME_SELECTION', // Putar kembali status sesi ke seleksi
+        stage1: null,
+        editorial: null,
+        angle: null,
+        source: {
+          ...draft.source,
+          featuredImage: null // Reset agar artikel berikutnya bisa memakai foto baru
+        },
+        stage1Multi: {
+          themes: remainingThemes
+        }
+      });
+      
+      await sessionManager.save(updatedMultiDraft);
+
+      return telegramApi.sendMessage(
+        update.chatId,
+        [
+          publishReportText,
+          `🎉 *Satu tema berhasil diterbitkan!* Masih ada *${remainingThemes.length} tema berita* lainnya dari podcast ini.`,
+          '',
+          'Silakan pilih tema selanjutnya untuk diproses, atau klik *🏁 Selesai & Tutup* jika sudah selesai.'
+        ].join('\n'),
+        createThemeSelectionKeyboard(remainingThemes)
+      );
+    }
+
+    // JIKA TIDAK ADA TEMA TERSISA: Tutup sesi normal
+    await sessionManager.cancel(update.chatId);
+
     await telegramApi.sendMessage(
       update.chatId,
       `${publishReportText}\nSesi draf ini telah ditutup dengan aman. Silakan klik "📰 Berita Baru" untuk memulai kembali.`,
       createMainKeyboard()
     );
-
-    // 2. Kirim Laporan ke Grup Redaksi (Jika terkonfigurasi)
-    const config = container.resolve(TOKENS.CONFIGURATION);
-    if (config.telegram.groupChatId) {
-      try {
-        await telegramApi.sendMessage(config.telegram.groupChatId, publishReportText);
-      } catch (groupError) {
-        logger.error('Failed to send publish success report to Coordination Group', { error: groupError.message });
-      }
-    }
 
   } catch (error) {
     return telegramApi.sendMessage(
