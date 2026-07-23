@@ -1,15 +1,13 @@
-// FILE: src/application/seo/report.js
-
 export class SeoTelegramReporter {
-  constructor(telegramApi) {
+  constructor(telegramApi, logger = null) {
     this.telegramApi = telegramApi;
+    this.logger = logger;
   }
 
   async send(chatId, audit, validation, scoring, indexNowResponse, articleUrl) {
     const formatStatus = (isValid) => (isValid ? '✅' : '❌');
     const formatSitemap = (isPresent) => (isPresent ? '✅ Ditemukan' : '⚠️ Warning (Not Listed)');
 
-    // 🚀 ATURAN DETEKSI INDEXNOW SECARA INFORMATIF
     const formatIndexNow = (response) => {
       if (response.success) {
         return `✅ Success (${response.status})`;
@@ -44,7 +42,7 @@ export class SeoTelegramReporter {
       `External Link : 🌍 ${audit.externalLinksCount}`,
       `Reading Time : ⏱️ ${audit.readingTime} menit`,
       `Word Count : 📝 ${audit.wordCount} kata`,
-      `IndexNow : ${formatIndexNow(indexNowResponse)}`, // 🚀 Menampilkan detail status deskriptif
+      `IndexNow : ${formatIndexNow(indexNowResponse)}`,
       '',
       '━━━━━━━━━━━━━━━━━━━━━━━',
       '',
@@ -58,7 +56,11 @@ export class SeoTelegramReporter {
     try {
       await this.telegramApi.sendMessage(chatId, message);
     } catch (error) {
-      console.error('Failed to dispatch SEO telegram report message', error);
+      if (this.logger) {
+        this.logger.error('Failed to dispatch SEO telegram report message', { error: error.message });
+      } else {
+        console.error('Failed to dispatch SEO telegram report message', error);
+      }
     }
   }
 }

@@ -1,5 +1,3 @@
-// FILE: src/application/telegram/dispatcher.js
-
 import { WORKFLOW_STATE } from '../../core/constants/index.js';
 import { TOKENS } from '../../core/container/tokens.js';
 import { MESSAGES } from '../../core/constants/messages.js';
@@ -60,73 +58,108 @@ const registry = new CommandRegistry()
   .registerAdmin('/listusers', listUsersCommand);
 
 export async function dispatchTelegramUpdate(update, services) {
-  const config = services.container.resolve(TOKENS.CONFIGURATION);
-  const whitelistRepo = services.container.resolve(TOKENS.WHITELIST_REPOSITORY);
   const logger = services.container.resolve(TOKENS.LOGGER);
 
-  // =========================================================================
-  // 🚀 PENYARING KEAMANAN (SAFETY GUARD CLAUSE)
-  // Abaikan semua pesan masuk jika berasal dari Grup (ID bernilai Negatif).
-  // Bot hanya merespon input dari obrolan pribadi / DM (ID bernilai Positif).
-  // =========================================================================
-  if (update.chatId && Number(update.chatId) < 0) {
-    logger.debug('Ignored group message to prevent session collision', { chatId: update.chatId });
-    return; // Keluar secara sunyi tanpa membalas chat di grup
-  }
+  try {
+    const config = services.container.resolve(TOKENS.CONFIGURATION);
+    const whitelistRepo = services.container.resolve(TOKENS.WHITELIST_REPOSITORY);
 
-  const allowedUsersEnv = config.telegram.allowedUsers || [];
-  const dynamicWhitelist = await whitelistRepo.getAll();
-  const allowedUsersKv = dynamicWhitelist.map((user) => Number(user.userId));
+    // Standardisasi ekstraksi Chat ID, User ID, dan Text dari berbagai payload Telegram
+    const chatId = update.chatId || update.message?.chat?.id || update.callback_query?.message?.chat?.id;
+    const userId = Number(update.userId || update.message?.from?.id || update.callback_query?.from?.id);
+    const text = (update.text || update.message?.text || update.callback_query?.data || '').trim();
 
-  const userId = Number(update.userId);
-  const isSuperAdmin = allowedUsersEnv.includes(userId);
-  const isAllowedUser = isSuperAdmin || allowedUsersKv.includes(userId);
+    // =========================================================================
+    // 🚀 PENYARING KEAMANAN (SAFETY GUARD CLAUSE)
+    // Abaikan pesan dari grup (ID < 0)
+    // =========================================================================
+    if (chatId && Number(chatId) < 0) {
+      logger.debug('Ignored group message to prevent session collision', { chatId });
+      return;
+    }
 
-  if (!isAllowedUser && allowedUsersEnv.length > 0) {
-    logger.warn('Unauthorized access attempt blocked', { userId, chatId: update.chatId });
-    return services.telegramApi.sendMessage(update.chatId, MESSAGES.AUTH.UNAUTHORIZED);
-  }
+    const allowedUsersEnv = config.telegram.allowedUsers || [];
+    const dynamicWhitelist = await whitelistRepo.getAll();
+    const allowedUsersKv = dynamicWhitelist.map((user) => Number(user.userId));
 
-  const text = (update.text ?? '').trim();
+    const isSuperAdmin = allowedUsersEnv.includes(userId);
+    const isAllowedUser = isSuperAdmin || allowedUsersKv.includes(userId);
 
-  // Executing Admin Commands
-  if (isSuperAdmin) {
-    for (const [prefix, handler] of registry.adminCommands.entries()) {
-      if (text === prefix || text.startsWith(prefix + ' ')) {
-        return handler(update, services.telegramApi, whitelistRepo);
+    if (!isAllowedUser && allowedUsersEnv.length > 0) {
+      logger.warn('Unauthorized access attempt blocked', { userId, chatId });
+      return services.telegramApi.sendMessage(chatId, MESSAGES.AUTH.UNAUTHORIZED);
+    }
+
+    // =========================================================================
+    // 🚨 EMERGENCY RESET BYPASS
+    // Paksa hapus kuncian draf jika pengguna mengirim perintah Batal atau Start
+    // =========================================================================
+    if (text === '/cancel' || text === '❌ Batal' || text === '/start' || text === '🏁 Mulai') {
+      logger.info('Executing emergency session reset', { command: text, chatId });
+      await services.sessionManager.cancel(chatId);
+    }
+
+    // Executing Admin Commands
+    if (isSuperAdmin) {
+      for (const [prefix, handler] of registry.adminCommands.entries()) {
+        if (text === prefix || text.startsWith(prefix + ' ')) {
+          return await handler(update, services.telegramApi, whitelistRepo);
+        }
       }
     }
-  }
 
-  // Author Multi-Author Command
-  if (text.startsWith('/setauthor')) {
-    return setAuthorCommand(update, services.telegramApi, whitelistRepo, config);
-  }
-
-  // Executing Static Commands
-  const staticHandler = registry.staticCommands.get(text);
-  if (staticHandler) {
-    logger.info('Executing static command', { command: text });
-    return staticHandler(update, services.telegramApi, services.sessionManager, services.container);
-  }
-
-  // Executing Dynamic Workflow State
-  const draft = await services.sessionManager.get(update.chatId);
-
-  if (update.hasPhoto || update.hasDocument) {
-    if (draft?.state === WORKFLOW_STATE.WAITING_FEATURED_IMAGE && update.hasPhoto) {
-      return featuredImageCommand(update, services.telegramApi, services.sessionManager);
+    // Author Multi-Author Command
+    if (text.startsWith('/setauthor')) {
+      return await setAuthorCommand(update, services.telegramApi, whitelistRepo, config);
     }
-    return ocrArticleCommand(update, services.telegramApi, services.sessionManager, services.container);
-  }
 
-  if (draft?.state === WORKFLOW_STATE.WAITING_MANUAL_EDIT) {
-    return manualEditSaveCommand(update, services.telegramApi, services.sessionManager);
-  }
+    // Executing Static Commands
+    const staticHandler = registry.staticCommands.get(text);
+    if (staticHandler) {
+      logger.info('Executing static command', { command: text });
+      return await staticHandler(update, services.telegramApi, services.sessionManager, services.container);
+    }
 
-  if (draft?.state === WORKFLOW_STATE.WAITING_ANGLE) {
-    return angleSaveCommand(update, services.telegramApi, services.sessionManager, services.container);
-  }
+    // Executing Dynamic Workflow State
+    const draft = await services.sessionManager.get(chatId);
 
-  return articleCommand(update, services.telegramApi, services.sessionManager, services.container);
+    if (update.hasPhoto || update.hasDocument) {
+      if (draft?.state === WORKFLOW_STATE.WAITING_FEATURED_IMAGE && update.hasPhoto) {
+        return await featuredImageCommand(update, services.telegramApi, services.sessionManager);
+      }
+      return await ocrArticleCommand(update, services.telegramApi, services.sessionManager, services.container);
+    }
+
+    if (draft?.state === WORKFLOW_STATE.WAITING_MANUAL_EDIT) {
+      return await manualEditSaveCommand(update, services.telegramApi, services.sessionManager);
+    }
+
+    if (draft?.state === WORKFLOW_STATE.WAITING_ANGLE) {
+      return await angleSaveCommand(update, services.telegramApi, services.sessionManager, services.container);
+    }
+
+    return await articleCommand(update, services.telegramApi, services.sessionManager, services.container);
+
+  } catch (error) {
+    logger.error('Critical unhandled error in dispatcher', { 
+      error: error.message, 
+      stack: error.stack 
+    });
+
+    const targetChatId = update.chatId || update.message?.chat?.id || update.callback_query?.message?.chat?.id;
+    
+    if (targetChatId) {
+      // Bersihkan kuncian sesi agar user tidak tersangkut permanen
+      try {
+        await services.sessionManager.cancel(targetChatId);
+      } catch (e) {
+        logger.error('Failed to reset session on panic fallback', { error: e.message });
+      }
+
+      return services.telegramApi.sendMessage(
+        targetChatId,
+        '⚠️ <b>Terjadi kesalahan sistem internal.</b>\nSesi Anda telah direset otomatis. Silakan kirimkan kembali perintah Anda atau ketik /start.'
+      );
+    }
+  }
 }

@@ -22,7 +22,8 @@ export async function ocrArticleCommand(update, telegramApi, sessionManager, con
     return telegramApi.sendMessage(update.chatId, MESSAGES.OCR.INPUT_INVALID);
   }
 
-  await telegramApi.sendMessage(update.chatId, MESSAGES.OCR.DOWNLOAD_FAILED);
+  // ✅ DIBERSIHKAN: Mengirim pesan indikator proses OCR (bukan status gagal)
+  await telegramApi.sendMessage(update.chatId, '🔍 *Memindai gambar/dokumen (OCR)...* Mohon tunggu sebentar.');
 
   try {
     const downloadedFile = await telegramApi.downloadFile(fileId);
@@ -39,12 +40,12 @@ export async function ocrArticleCommand(update, telegramApi, sessionManager, con
     const editorialService = container.resolve(TOKENS.EDITORIAL_SERVICE);
     const stage1Result = await editorialService.ingestStage1(draftWithSource);
 
-    // Proteksi Confidence Score
+    // ✅ DILENGKAPI: Proteksi Confidence Score
     if (stage1Result.confidence.ocrAccuracy < 90) {
       await sessionManager.cancel(update.chatId);
       return telegramApi.sendMessage(
         update.chatId,
-        MESSAGES.OCR.LOW_ACCURACY.replace('{accuracy}', stage1Result.confidence.ocrAccuracy)
+        `⚠️ *Akurasi OCR Rendah (${stage1Result.confidence.ocrAccuracy}%)*\n\nTeks dari gambar terlalu kabur atau tidak terbaca dengan jelas. Silakan kirim ulang gambar dengan kualitas lebih baik atau ketik teks naskah secara manual.`
       );
     }
 
@@ -64,23 +65,25 @@ export async function ocrArticleCommand(update, telegramApi, sessionManager, con
     return telegramApi.sendMessage(
       update.chatId,
       [
-        '📊 *HASIL ANALISIS INGEST GEMINI (STAGE 1)*',
+        '📊 *HASIL ANALISIS INGEST GEMINI (STAGE 1 - OCR)*',
         '━━━━━━━━━━━━━━━━━━',
         `🏷️ *Kategori:* ${stage1Result.wordpress.category}`,
         `🔑 *Keyword:* ${stage1Result.seo.focusKeyword}`,
         `🚨 *Prioritas:* ${priorityIcons[stage1Result.priority] || stage1Result.priority}`,
         `📈 *News Score:* ${stage1Result.newsValue.score}/100`,
         `🎯 *Draf Sementara Reporter:* "${stage1Result.draftReporter.title}"`,
-        `👁️ *Akurasi OCR:* ${stage1Result.confidence.ocrAccuracy}%`,
         '━━━━━━━━━━━━━━━━━━',
         '',
         '✍️ *STAGE 2: TENTUKAN SUDUT PANDANG (ANGLE)*',
-        'Silakan ketik angle khusus Anda (Contoh: "fokus pada kesedihan keluarga korban") atau klik tombol di bawah untuk default AI.',
+        'Silakan ketik angle khusus Anda atau klik tombol di bawah untuk default AI.',
       ].join('\n'),
       createAngleKeyboard()
     );
   } catch (error) {
     await sessionManager.cancel(update.chatId);
-    return telegramApi.sendMessage(update.chatId, `${MESSAGES.OCR.INGEST_FAILED}${error.message}`);
+    return telegramApi.sendMessage(
+      update.chatId,
+      `${MESSAGES.WORKFLOW.STAGE1_FAILED}${error.message}\n\nSesi dibatalkan.`
+    );
   }
 }
