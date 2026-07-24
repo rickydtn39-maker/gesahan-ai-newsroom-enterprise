@@ -4,11 +4,11 @@ export class InnerTubeClient {
   static async fetchPlayerResponse(videoId, env, logger) {
     const customProxy = env.CUSTOM_PROXY_URL || null;
     
-    // 🚀 STRICT CONFIGURATION: Mengambil API Key dari environment tanpa hardcoding di dalam kode logis
+    // 🚀 STRICT CONFIGURATION: Hanya aktif jika YOUTUBE_INNERTUBE_API_KEY dikonfigurasi di environment
     const innertubeKey = env.YOUTUBE_INNERTUBE_API_KEY;
     if (!innertubeKey) {
-      logger.warn('[InnerTube Client] YOUTUBE_INNERTUBE_API_KEY is not configured in environment. Skipping direct route.');
-      throw new Error('YOUTUBE_INNERTUBE_API_KEY is missing in wrangler configuration.');
+      logger.warn('[InnerTube Client] YOUTUBE_INNERTUBE_API_KEY is not configured. Direct InnerTube route disabled.');
+      throw new Error('YOUTUBE_INNERTUBE_API_KEY is missing in wrangler.jsonc config.');
     }
 
     const innertubeUrl = `https://www.youtube.com/youtubei/v1/player?key=${innertubeKey}`;
@@ -91,7 +91,7 @@ export class InnerTubeClient {
 
         const data = await response.json();
 
-        // 🚀 ENRICHED DIAGNOSTIC TELEMETRY: Membuka 'black box' kegagalan YouTube API secara detail
+        // 🚀 ENRICHED DIAGNOSTIC TELEMETRY: Membuka 'black box' kegagalan YouTube API secara detail dan bersih
         logger.info('[InnerTube Client] Player Response Diagnostics Evaluated:', {
           client: client.name,
           playabilityStatus: data?.playabilityStatus || null,
@@ -100,12 +100,6 @@ export class InnerTubeClient {
           hasStreamingData: Boolean(data?.streamingData),
           hasMicroformat: Boolean(data?.microformat)
         });
-
-        // Jika captions kosong, cetak potongan data mentah untuk investigasi forensik
-        if (!data?.captions) {
-          const rawString = JSON.stringify(data);
-          logger.warn(`[InnerTube Client] Captions is missing. Raw payload preview: ${rawString.substring(0, 1500)}...`);
-        }
 
         if (data?.playabilityStatus?.status === 'UNPLAYABLE') {
           throw new Error(`Video is unplayable: ${data?.playabilityStatus?.reason || 'No reason provided'}`);

@@ -1,3 +1,5 @@
+// FILE: src/infrastructure/providers/telegram/telegram-api.js
+
 export class TelegramApi {
   constructor(token) {
     this.token = token;
@@ -23,18 +25,35 @@ export class TelegramApi {
     return result.result;
   }
 
-  async sendMessage(chatId, text, replyMarkup = null) {
+  async sendMessage(chatId, text, replyMarkup = null, parseMode = 'Markdown') {
     const payload = {
       chat_id: chatId,
       text,
-      parse_mode: 'Markdown',
     };
+
+    if (parseMode) {
+      payload.parse_mode = parseMode;
+    }
 
     if (replyMarkup) {
       payload.reply_markup = replyMarkup;
     }
 
-    return this.call('sendMessage', payload);
+    try {
+      return await this.call('sendMessage', payload);
+    } catch (error) {
+      // 🚀 ENTERPRISE FALLBACK SYSTEM: Jika parsing Markdown gagal akibat karakter liar, copot parse_mode dan kirim ulang sebagai Plain Text
+      if (
+        payload.parse_mode &&
+        (error.message.includes("can't parse entities") ||
+          error.message.includes('parse_mode') ||
+          error.message.includes('Markdown'))
+      ) {
+        delete payload.parse_mode;
+        return await this.call('sendMessage', payload);
+      }
+      throw error;
+    }
   }
 
   async getFile(fileId) {
