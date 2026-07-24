@@ -8,7 +8,7 @@ export async function telegramWebhookHandler(request, context) {
   const logger = context.container.resolve(TOKENS.LOGGER);
   const metrics = context.container.resolve(TOKENS.METRICS);
 
-  // 🚀 SECURE WEBHOOK VERIFICATION HEADER
+  // SECURE WEBHOOK VERIFICATION HEADER
   const webhookSecret = context.configuration.telegram.webhookSecretToken;
   if (webhookSecret) {
     const incomingSecret = request.headers.get('X-Telegram-Bot-Api-Secret-Token');
@@ -29,6 +29,9 @@ export async function telegramWebhookHandler(request, context) {
 
   const telegramApi = context.container.resolve(TOKENS.TELEGRAM_API);
   const sessionManager = context.container.resolve(TOKENS.SESSION_MANAGER);
+  
+  // 🚀 DETEKSI DOMAIN AKTIF DARI REQUEST MASUK UNTUK ASSEMBLYAI WEBHOOK
+  const origin = new URL(request.url).origin;
 
   logger.info('Incoming Telegram Webhook', {
     updateId: update.updateId,
@@ -37,6 +40,7 @@ export async function telegramWebhookHandler(request, context) {
     hasText: update.hasText,
     hasPhoto: update.hasPhoto,
     hasDocument: update.hasDocument,
+    origin,
   });
 
   metrics.increment('webhook_received', 1, { source: 'telegram' });
@@ -45,6 +49,7 @@ export async function telegramWebhookHandler(request, context) {
     telegramApi,
     sessionManager,
     container: context.container,
+    origin, // 🚀 Wariskan domain dinamis secara rapi
   });
 
   return new Response(JSON.stringify({ ok: true }, null, 2), {

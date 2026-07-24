@@ -10,7 +10,7 @@ import { getYoutubePassTemplate } from '../../editorial/prompt/templates/youtube
 import { WORDPRESS_CATEGORY_MAP } from '../../../infrastructure/providers/wordpress/category-map.js';
 import { QueueManager } from '../../../infrastructure/queue/queue-manager.js';
 
-export async function articleCommand(update, telegramApi, sessionManager, container) {
+export async function articleCommand(update, telegramApi, sessionManager, container, origin = null) {
   let state = await sessionManager.getState(update.chatId);
 
   if (state === WORKFLOW_STATE.IDLE) {
@@ -39,16 +39,43 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
     );
 
     try {
-      // Ambil env dari container secara dinamis untuk AssemblyAI Key
       const env = container.has('env') ? container.resolve('env') : {};
       
-      // Ambil transkrip dengan meneruskan objek env ke sistem dual-engine
-      const transcriptText = await fetchYoutubeTranscript(incomingText, env);
+      // Ambil domain origin dinamis dari parameter pemanggilan
+      const activeOrigin = origin || (container.has('request') ? new URL(container.resolve('request').url).origin : null);
+
+      // Panggil sistem transkripsi cerdas asinkron/sinkron
+      const transcriptResult = await fetchYoutubeTranscript(
+        incomingText, 
+        env, 
+        update.chatId, 
+        update.userId, 
+        activeOrigin
+      );
+
+      // 🎙️ JALUR SUKSES 1: Jika AssemblyAI Asinkronus Webhook Aktif
+      if (transcriptResult && transcriptResult.async) {
+        const draft = await sessionManager.get(update.chatId);
+        const updatedDraft = draft.copyWith({
+          state: WORKFLOW_STATE.WAITING_TRANSCRIPT,
+          source: {
+            ...draft.source,
+            type: 'text',
+            text: `[Menunggu Transkrip AssemblyAI Job ID: ${transcriptResult.transcriptId}]`
+          }
+        });
+        await sessionManager.save(updatedDraft);
+
+        // Beritahu wartawan bahwa transkripsi berjalan aman di latar belakang
+        return await telegramApi.sendMessage(update.chatId, transcriptResult.message);
+      }
+
+      // 🎙️ JALUR SUKSES 2: Jika Menggunakan Scraper Sinkronus Cepat (Fallback)
       const logger = container.resolve(TOKENS.LOGGER);
-      logger.info('YouTube transcript fetched successfully', { chatId: update.chatId });
+      logger.info('YouTube transcript fetched successfully via scraper', { chatId: update.chatId });
 
       const allowedCategories = Object.keys(WORDPRESS_CATEGORY_MAP).join(', ');
-      const geminiPrompt = getYoutubePassTemplate(allowedCategories, transcriptText);
+      const geminiPrompt = getYoutubePassTemplate(allowedCategories, transcriptResult);
 
       const aiProvider = container.resolve(TOKENS.AI_PROVIDER);
       

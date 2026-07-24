@@ -1,24 +1,26 @@
 // FILE: src/infrastructure/providers/youtube/youtube-transcript.js
 
-// Helper Fetch dengan Timeout ketat untuk mencegah Cloudflare Workers menggantung
-async function fetchWithTimeout(url, options = {}, timeoutMs = 3000) {
+// Helper Fetch dengan Timeout yang dioptimalkan dengan block finally
+async function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(url, {
+    return await fetch(url, {
       ...options,
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
-    return response;
   } catch (error) {
-    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error(`Batas waktu request (${timeoutMs} ms) terlampaui`);
+    }
     throw error;
+  } finally {
+    clearTimeout(timeoutId); // Jaminan mutlak timer dibersihkan di semua kondisi
   }
 }
 
-export async function fetchYoutubeTranscript(videoUrl, env = {}) {
+export async function fetchYoutubeTranscript(videoUrl, env = {}, chatId = null, userId = null, origin = null) {
   const videoIdMatch = videoUrl.match(
     /(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i
   );
@@ -30,13 +32,15 @@ export async function fetchYoutubeTranscript(videoUrl, env = {}) {
   const assemblyAiKey = env.ASSEMBLYAI_API_KEY || null;
 
   // =========================================================================
-  // 🚀 ENGINE 1: PREMIUM ASSEMBLYAI WHISPER PIPELINE (JIKA API KEY TERSEDIA)
+  // 🎙️ JALUR A: PREMIUM ASSEMBLYAI PIPELINE (ASINKRONUS WEBHOOK)
   // =========================================================================
-  if (assemblyAiKey) {
+  if (assemblyAiKey && chatId && userId && origin) {
+    console.log('[YouTube Pipeline A] Attempting premium async AssemblyAI pipeline...');
     try {
-      console.log('[YouTube Pipeline] Initiating premium AssemblyAI transcription...');
+      const cobaltUrl = env.CUSTOM_COBALT_URL || 'https://api.cobalt.tools/api/json';
+      console.log(`[YouTube Pipeline A] Requesting audio stream from Cobalt: ${cobaltUrl}`);
       
-      const cobaltResponse = await fetchWithTimeout('https://api.cobalt.tools/api/json', {
+      const cobaltResponse = await fetchWithTimeout(cobaltUrl, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -47,347 +51,245 @@ export async function fetchYoutubeTranscript(videoUrl, env = {}) {
           isAudioOnly: true,
           aFormat: 'mp3'
         })
-      }, 6000);
+      }, 7000);
 
-      if (!cobaltResponse.ok) {
-        throw new Error('Cobalt audio extraction service returned non-200 status');
-      }
+      if (cobaltResponse.ok) {
+        const cobaltData = await cobaltResponse.json();
+        const directAudioUrl = cobaltData.url;
 
-      const cobaltData = await cobaltResponse.json();
-      const directAudioUrl = cobaltData.url;
+        if (directAudioUrl) {
+          const webhookUrl = `${origin}/webhooks/assemblyai?chatId=${chatId}&userId=${userId}`;
+          console.log('[YouTube Pipeline A] Audio URL acquired. Initializing AssemblyAI transcript job...');
 
-      if (!directAudioUrl) {
-        throw new Error('Failed to retrieve direct audio stream link from Cobalt');
-      }
+          const assemblyResponse = await fetchWithTimeout('https://api.assemblyai.com/v2/transcript', {
+            method: 'POST',
+            headers: {
+              'authorization': assemblyAiKey,
+              'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+              audio_url: directAudioUrl,
+              language_code: 'id',
+              speech_model: 'best',
+              webhook_url: webhookUrl
+            })
+          }, 5000);
 
-      const assemblyResponse = await fetchWithTimeout('https://api.assemblyai.com/v2/transcript', {
-        method: 'POST',
-        headers: {
-          'authorization': assemblyAiKey,
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify({
-          audio_url: directAudioUrl,
-          language_code: 'id',
-          speech_models: ["universal-3-5-pro", "universal-2"]
-        })
-      }, 5000);
-
-      if (!assemblyResponse.ok) {
-        const errorDetail = await assemblyResponse.text();
-        throw new Error(`AssemblyAI initialization failed: ${errorDetail}`);
-      }
-
-      const assemblyData = await assemblyResponse.json();
-      const transcriptId = assemblyData.id;
-
-      let completed = false;
-      let transcriptText = '';
-      const startTime = Date.now();
-
-      while (!completed && (Date.now() - startTime < 20000)) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        try {
-          const pollResponse = await fetchWithTimeout(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
-            headers: { 'authorization': assemblyAiKey }
-          }, 3000);
-
-          if (pollResponse.ok) {
-            const pollData = await pollResponse.json();
-            if (pollData.status === 'completed') {
-              completed = true;
-              transcriptText = pollData.text;
-            } else if (pollData.status === 'failed') {
-              throw new Error(`AssemblyAI job failed: ${pollData.error}`);
-            }
+          if (assemblyResponse.ok) {
+            const assemblyData = await assemblyResponse.json();
+            return {
+              async: true,
+              transcriptId: assemblyData.id,
+              message: '🎙️ *AUDIO PIPELINE BERHASIL DIINJEK!*\n\nServer AI sedang mentranskripsikan audio percakapan video secara asinkron. Proses ini membutuhkan waktu sekitar 1-2 menit.\n\nSistem akan mengirimkan notifikasi instan secara otomatis begitu transkrip selesai!'
+            };
           }
-        } catch (pollErr) {
-          console.warn('[YouTube Pipeline] Polling cycle timed out, retrying...', pollErr.message);
         }
       }
-
-      if (transcriptText) {
-        console.log('[YouTube Pipeline] AssemblyAI transcription completed successfully!');
-        return transcriptText;
-      } else {
-        throw new Error('AssemblyAI transcription timeout.');
-      }
-
     } catch (premiumError) {
-      console.log('[YouTube Pipeline] Premium Engine failed, falling back to Legacy TimedText Scraper...', premiumError.message);
+      console.warn(`[YouTube Pipeline A] AssemblyAI pipeline threw exception: ${premiumError.message}`);
     }
+    console.log('[YouTube Pipeline A] Falling back to Pipeline B (Official InnerTube API)...');
   }
 
   // =========================================================================
-  // 🚀 ENGINE 2: GOOGLE LEGACY TIMEDTEXT API SCRAPER
-  // Menggunakan rute legacy Google TimedText yang sangat ringan dan andal.
+  // 🚀 JALUR B: OFFICIAL YOUTUBE INNERTUBE MULTI-CLIENT API (PRIMARY SYSTEM)
+  // Menghubungi endpoint resmi Google client player dengan rotasi device app.
   // =========================================================================
-  console.log('[YouTube Pipeline] Querying Legacy TimedText API...');
-  
-  try {
-    return await getTranscriptFromLegacyAPI(videoId);
-  } catch (legacyError) {
-    console.warn('[YouTube Pipeline] Legacy API failed completely. Try fallback embed parser...', legacyError.message);
-  }
+  console.log('[YouTube Pipeline B] Running Multi-Client InnerTube Discovery Engine...');
 
-  // =========================================================================
-  // 🚀 ENGINE 3: FALLBACK EMBED HTML PARSER (PILIHAN TERAKHIR)
-  // =========================================================================
-  return await runFallbackEmbedScraper(videoId);
-}
+  const customProxy = env.CUSTOM_PROXY_URL || null;
+  const innertubeKey = 'AIzaSyAO_JV6GgA-Wb_h-Z64b0718503b44b';
+  const innertubeUrl = `https://www.youtube.com/youtubei/v1/player?key=${innertubeKey}`;
 
-// =========================================================================
-// 🛠️ INTERNAL SERVICE FUNCTIONS (LEGACY GOOGLE TIMEDTEXT)
-// =========================================================================
-
-const strategies = [
-  { name: 'Direct Google API', useProxy: false },
-  { name: 'Proxy Gateway CorsProxy.io', useProxy: true, proxy: 'corsproxy' },
-  { name: 'Proxy Gateway AFELD', useProxy: true, proxy: 'afeld' },
-  { name: 'Proxy Gateway AllOrigins', useProxy: true, proxy: 'allorigins' },
-  { name: 'Proxy Gateway CodeTabs', useProxy: true, proxy: 'codetabs' }
-];
-
-async function getTranscriptFromLegacyAPI(videoId) {
-  const listUrl = `https://video.google.com/timedtext?type=list&v=${videoId}`;
-  const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7'
-  };
-
-  let xmlListText = '';
-  let successfulStrategy = null;
-
-  // 1. Dapatkan daftar trek bahasa yang tersedia
-  for (const strategy of strategies) {
-    try {
-      console.log(`[YouTube Legacy] Fetching tracklist with strategy: ${strategy.name}`);
-      xmlListText = await fetchLegacyTrack(listUrl, strategy, headers);
-      if (xmlListText && xmlListText.includes('<transcript_list>')) {
-        successfulStrategy = strategy;
-        break;
-      }
-    } catch (err) {
-      console.warn(`[YouTube Legacy] Strategy ${strategy.name} missed: ${err.message}`);
-    }
-  }
-
-  if (!xmlListText || !xmlListText.includes('<transcript_list>')) {
-    throw new Error('Gagal mendapatkan daftar trek bahasa dari TimedText API.');
-  }
-
-  const tracks = parseTracks(xmlListText);
-  if (tracks.length === 0) {
-    throw new Error('Tidak ada subtitle/transkrip yang tersedia pada video ini.');
-  }
-
-  // Prioritaskan: 1. ID Manual, 2. ID Auto-Generated (asr), 3. EN Manual, 4. Trek pertama apa saja
-  const prioritizedTracks = tracks.sort((a, b) => {
-    const isAId = a.langCode === 'id';
-    const isBId = b.langCode === 'id';
-    if (isAId && !isBId) return -1;
-    if (!isAId && isBId) return 1;
-    if (isAId) {
-      const isAAsr = a.name === 'asr';
-      const isBAsr = b.name === 'asr';
-      if (!isAAsr && isBAsr) return -1;
-      if (isAAsr && !isBAsr) return 1;
-    }
-    const isAEn = a.langCode === 'en';
-    const isBEn = b.langCode === 'en';
-    if (isAEn && !isBEn) return -1;
-    if (!isAEn && isBEn) return 1;
-    return 0;
-  });
-
-  const bestTrack = prioritizedTracks[0];
-  console.log(`[YouTube Legacy] Selected best track: lang=${bestTrack.langCode}, name=${bestTrack.name}`);
-
-  const trackUrl = `https://video.google.com/timedtext?type=track&v=${videoId}&lang=${bestTrack.langCode}${bestTrack.name ? `&name=${bestTrack.name}` : ''}`;
-  
-  // 2. Unduh konten transkrip menggunakan strategi/rute IP yang terbukti sukses sebelumnya
-  let xmlTrackText = '';
-  try {
-    xmlTrackText = await fetchLegacyTrack(trackUrl, successfulStrategy, headers);
-  } catch (_err) {
-    // Jika rute sukses mengalami anomali, lakukan rotasi ke seluruh strategi
-    for (const strategy of strategies) {
-      try {
-        xmlTrackText = await fetchLegacyTrack(trackUrl, strategy, headers);
-        if (xmlTrackText && xmlTrackText.includes('<transcript>')) {
-          break;
+  // Daftar klien resmi YouTube untuk mengelabuhi pembatasan GDPR
+  const innertubeClients = [
+    {
+      name: 'ANDROID Mobile App Client (GDPR Bypass)',
+      payload: {
+        videoId: videoId,
+        context: {
+          client: {
+            clientName: 'ANDROID',
+            clientVersion: '19.05.36',
+            androidSdkVersion: 31,
+            hl: 'id',
+            gl: 'ID'
+          }
         }
-      } catch (_inner) {
-        // Lanjut mencoba
+      }
+    },
+    {
+      name: 'IOS Mobile App Client (GDPR Bypass)',
+      payload: {
+        videoId: videoId,
+        context: {
+          client: {
+            clientName: 'IOS',
+            clientVersion: '19.02.2',
+            deviceModel: 'iPhone16,2',
+            hl: 'id',
+            gl: 'ID'
+          }
+        }
+      }
+    },
+    {
+      name: 'WEB Desktop Player Client (Fallback)',
+      payload: {
+        videoId: videoId,
+        context: {
+          client: {
+            clientName: 'WEB',
+            clientVersion: '2.20240210.01.00',
+            hl: 'id',
+            gl: 'ID',
+            utcOffsetMinutes: 420
+          }
+        }
       }
     }
-  }
+  ];
 
-  if (!xmlTrackText || !xmlTrackText.includes('<transcript>')) {
-    throw new Error('Gagal mengunduh berkas XML subtitle target.');
-  }
-
-  const textMatches = xmlTrackText.match(/<text[^>]*>([\s\S]*?)<\/text>/gi);
-  if (!textMatches) {
-    throw new Error('Berkas XML transkrip kosong atau tidak memiliki data teks.');
-  }
-
-  return textMatches.map(m => {
-    const content = m.replace(/<text[^>]*>([\s\S]*?)<\/text>/i, '$1');
-    return decodeHtmlEntities(content);
-  }).join(' ');
-}
-
-async function fetchLegacyTrack(url, strategy, headers) {
-  let requestUrl = url;
-  if (strategy.useProxy) {
-    if (strategy.proxy === 'corsproxy') {
-      requestUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-    } else if (strategy.proxy === 'afeld') {
-      requestUrl = `https://jsonp.afeld.me/?url=${encodeURIComponent(url)}`;
-    } else if (strategy.proxy === 'allorigins') {
-      requestUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    } else if (strategy.proxy === 'codetabs') {
-      requestUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`;
-    }
-  }
-  
-  const response = await fetchWithTimeout(requestUrl, { headers: strategy.useProxy ? {} : headers }, 3000);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-  return await response.text();
-}
-
-function parseTracks(xmlText) {
-  const tracks = [];
-  const trackBlockRegex = /<track([\s\S]*?)\/>/gi;
-  let blockMatch;
-  while ((blockMatch = trackBlockRegex.exec(xmlText)) !== null) {
-    const block = blockMatch[1];
-    const langMatch = block.match(/lang_code="([^"]+)"/i);
-    const nameMatch = block.match(/name="([^"]*)"/i);
-    if (langMatch) {
-      tracks.push({
-        langCode: langMatch[1],
-        name: nameMatch ? nameMatch[1] : ''
-      });
-    }
-  }
-  return tracks;
-}
-
-// =========================================================================
-// 🛠️ REGULAR EMBED SCRAPER FALLBACK
-// =========================================================================
-
-async function runFallbackEmbedScraper(videoId) {
-  const targetUrl = `https://www.youtube-nocookie.com/embed/${videoId}?hl=id&t=${Date.now()}`;
   let lastError = null;
 
-  for (const strategy of strategies) {
+  for (const client of innertubeClients) {
     try {
-      let requestUrl = targetUrl;
-      let headers = {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-        'Accept-Language': 'id-ID,id;q=0.9'
-      };
-
-      if (strategy.useProxy) {
-        if (strategy.proxy === 'corsproxy') {
-          requestUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-        } else if (strategy.proxy === 'afeld') {
-          requestUrl = `https://jsonp.afeld.me/?url=${encodeURIComponent(targetUrl)}`;
-        } else if (strategy.proxy === 'allorigins') {
-          requestUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-        } else if (strategy.proxy === 'codetabs') {
-          requestUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
-        }
-        headers = {};
+      let requestUrl = innertubeUrl;
+      if (customProxy) {
+        requestUrl = `${customProxy}${encodeURIComponent(innertubeUrl)}`;
       }
 
-      const response = await fetchWithTimeout(requestUrl, { headers }, 3000);
+      console.log(`[YouTube Pipeline B] Requesting player data via ${client.name}...`);
+      
+      const response = await fetchWithTimeout(requestUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+        },
+        body: JSON.stringify(client.payload)
+      }, 6000);
+
       if (!response.ok) {
-        throw new Error(`Status ${response.status}`);
+        throw new Error(`InnerTube returned status ${response.status}`);
       }
 
-      const html = await response.text();
-      const captionTracks = extractCaptionTracks(html);
-      if (!captionTracks || captionTracks.length === 0) {
-        throw new Error('Trek subtitle tidak ditemukan pada embed player.');
+      const payload = await response.json();
+      const jsonStr = JSON.stringify(payload);
+
+      // TELEMETRY DIAGNOSTIC LOGGER: Memeriksa struktur respon secara empiris
+      console.log({
+        event: 'YOUTUBE_INNERTUBE_CLIENT_DIAGNOSTICS',
+        client: client.name,
+        status: response.status,
+        hasPlayerResponse: jsonStr.includes('playabilityStatus'),
+        hasCaptionTracks: jsonStr.includes('captionTracks'),
+        playabilityStatus: payload?.playabilityStatus?.status || 'N/A'
+      });
+
+      // Deteksi kegagalan akses video (private, dsb)
+      if (payload?.playabilityStatus?.status === 'UNPLAYABLE') {
+        throw new Error(`Video tidak dapat diputar: ${payload?.playabilityStatus?.reason || 'Alasan tidak diketahui'}`);
       }
 
-      const selectedTrack = captionTracks.find(t => 
-        t.languageCode && (t.languageCode === 'id' || t.languageCode.startsWith('id'))
-      ) || captionTracks[0];
+      // Gunakan parser regex mendalam langsung pada string JSON payload murni
+      const captionTracks = extractCaptionTracksFromJsonString(jsonStr);
 
-      let xmlRequestUrl = selectedTrack.baseUrl;
-      if (strategy.useProxy) {
-        if (strategy.proxy === 'corsproxy') {
-          xmlRequestUrl = `https://corsproxy.io/?${encodeURIComponent(selectedTrack.baseUrl)}`;
-        } else if (strategy.proxy === 'afeld') {
-          xmlRequestUrl = `https://jsonp.afeld.me/?url=${encodeURIComponent(selectedTrack.baseUrl)}`;
-        } else if (strategy.proxy === 'allorigins') {
-          xmlRequestUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(selectedTrack.baseUrl)}`;
-        } else if (strategy.proxy === 'codetabs') {
-          xmlRequestUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(selectedTrack.baseUrl)}`;
+      if (captionTracks && captionTracks.length > 0) {
+        const bestTrack = selectBestTrack(captionTracks);
+        console.log(`[YouTube Pipeline B] Found best track: lang=${bestTrack.languageCode}, kind=${bestTrack.kind || 'manual'}`);
+
+        let xmlUrl = bestTrack.baseUrl;
+        if (!xmlUrl.includes('&fmt=xml')) {
+          xmlUrl += '&fmt=xml'; // Paksa format XML murni
         }
+
+        let xmlRequestUrl = xmlUrl;
+        if (customProxy) {
+          xmlRequestUrl = `${customProxy}${encodeURIComponent(xmlUrl)}`;
+        }
+
+        console.log('[YouTube Pipeline B] Downloading structured XML subtitles from Google CDN...');
+        const xmlResponse = await fetchWithTimeout(xmlRequestUrl, {}, 5000);
+
+        if (!xmlResponse.ok) {
+          throw new Error(`Google CDN XML returned HTTP status ${xmlResponse.status}`);
+        }
+
+        const xmlText = await xmlResponse.text();
+        const textMatches = xmlText.match(/<text[^>]*>([\s\S]*?)<\/text>/gi);
+
+        if (textMatches && textMatches.length > 0) {
+          console.log('[YouTube Pipeline B] Transcript successfully downloaded and parsed!');
+          return textMatches.map(m => {
+            const content = m.replace(/<text[^>]*>([\s\S]*?)<\/text>/i, '$1');
+            return decodeHtmlEntities(content);
+          }).join(' ');
+        } else {
+          throw new Error('XML file was empty of transcript text nodes.');
+        }
+      } else {
+        throw new Error('No captionTracks found in InnerTube JSON response for this client.');
       }
-
-      const xmlResponse = await fetchWithTimeout(xmlRequestUrl, { headers }, 3000);
-      if (!xmlResponse.ok) {
-        throw new Error(`XML Status ${xmlResponse.status}`);
-      }
-
-      const xmlText = await xmlResponse.text();
-      const textMatches = xmlText.match(/<text[^>]*>([\s\S]*?)<\/text>/gi);
-      if (!textMatches) throw new Error('XML sisa teks kosong.');
-
-      return textMatches.map(m => {
-        const content = m.replace(/<text[^>]*>([\s\S]*?)<\/text>/i, '$1');
-        return decodeHtmlEntities(content);
-      }).join(' ');
 
     } catch (err) {
+      console.warn(`[YouTube Pipeline B] Client ${client.name} missed: ${err.message}`);
       lastError = err;
     }
   }
 
-  throw new Error(`Seluruh strategi gagal. Error akhir: ${lastError.message}`);
+  throw new Error(`Seluruh rute transkripsi video gagal dieksekusi. Detail kegagalan: ${lastError?.message || 'Access Denied'}`);
 }
 
-function extractCaptionTracks(html) {
-  const playerResponseMatch = html.match(/ytInitialPlayerResponse\s*=\s*({[\s\S]*?});\s*(?:var|yt)/) ||
-                              html.match(/ytInitialPlayerResponse\s*=\s*([\s\S]*?);\s*(?:var\s+meta|<\/script)/i) ||
-                              html.match(/ytInitialPlayerResponse\s*=\s*({[\s\S]*?});/) ||
-                              html.match(/"ytInitialPlayerResponse"\s*:\s*({[\s\S]*?})\s*,\s*"microformat"/);
+// =========================================================================
+// 🛠️ INTERNAL SERVICE FUNCTIONS
+// =========================================================================
 
-  if (playerResponseMatch) {
-    try {
-      const parsed = JSON.parse(playerResponseMatch[1]);
-      const tracks = parsed?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-      if (tracks && Array.isArray(tracks) && tracks.length > 0) {
-        return tracks;
-      }
-    } catch (_e) {
-      // Abaikan dan lanjut ke direct regex
+function selectBestTrack(tracks) {
+  return tracks.sort((a, b) => {
+    const isAId = a.languageCode === 'id';
+    const isBId = b.languageCode === 'id';
+    if (isAId && !isBId) return -1;
+    if (!isAId && isBId) return 1;
+    if (isAId) {
+      const isAAsr = a.kind === 'asr';
+      const isBAsr = b.kind === 'asr';
+      if (!isAAsr && isBAsr) return -1;
+      if (isAAsr && !isBAsr) return 1;
     }
-  }
+    const isAEn = a.languageCode === 'en';
+    const isBEn = b.languageCode === 'en';
+    if (isAEn && !isBEn) return -1;
+    if (!isAEn && isBEn) return 1;
+    return 0;
+  })[0];
+}
 
+// Parser tangguh yang mengekstrak captionTracks langsung dari representasi string JSON
+function extractCaptionTracksFromJsonString(jsonStr) {
   const tracks = [];
+  
+  // Regex universal untuk memindai token baseUrl & languageCode di dalam string JSON
   const directTracksRegex = /\{"baseUrl"\s*:\s*"([^"]+)"[^}]+?"languageCode"\s*:\s*"([^"]+)"/g;
   let match;
   
-  while ((match = directTracksRegex.exec(html)) !== null) {
+  while ((match = directTracksRegex.exec(jsonStr)) !== null) {
     try {
       const baseUrlEscaped = match[1];
       const languageCode = match[2];
+      
+      // Mengubah unicode escaped backslashes ke string biasa secara aman
       const baseUrl = JSON.parse(`"${baseUrlEscaped}"`);
-      tracks.push({ baseUrl, languageCode });
-    } catch (_e) {
-      // Lanjut
-    }
+      
+      // Deteksi opsional tipe/jenis subtitle (asr atau bukan)
+      let kind = 'manual';
+      const surroundingBlock = jsonStr.substring(match.index, match.index + 300);
+      if (surroundingBlock.includes('"kind":"asr"') || surroundingBlock.includes('"kind" : "asr"')) {
+        kind = 'asr';
+      }
+
+      tracks.push({ baseUrl, languageCode, kind });
+    } catch (_e) {}
   }
 
   return tracks;

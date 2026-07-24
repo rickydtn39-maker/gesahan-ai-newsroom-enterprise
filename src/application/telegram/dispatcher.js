@@ -143,7 +143,14 @@ export async function dispatchTelegramUpdate(update, services) {
       return await angleSaveCommand(update, services.telegramApi, services.sessionManager, services.container);
     }
 
-    return await articleCommand(update, services.telegramApi, services.sessionManager, services.container);
+    // 🚀 FIXED: Meneruskan parameter services.origin agar terdeteksi sempurna di Engine 1
+    return await articleCommand(
+      update, 
+      services.telegramApi, 
+      services.sessionManager, 
+      services.container, 
+      services.origin
+    );
 
   } catch (error) {
     logger.error('Critical unhandled error in dispatcher', { 
