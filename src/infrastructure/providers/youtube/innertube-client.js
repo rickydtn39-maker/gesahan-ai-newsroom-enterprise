@@ -3,10 +3,17 @@
 export class InnerTubeClient {
   static async fetchPlayerResponse(videoId, env, logger) {
     const customProxy = env.CUSTOM_PROXY_URL || null;
-    const innertubeKey = 'AIzaSyAO_JV6GgA-Wb_h-Z64b0718503b44b';
+    
+    // 🚀 STRICT CONFIGURATION: Mengambil API Key dari environment tanpa hardcoding di dalam kode logis
+    const innertubeKey = env.YOUTUBE_INNERTUBE_API_KEY;
+    if (!innertubeKey) {
+      logger.warn('[InnerTube Client] YOUTUBE_INNERTUBE_API_KEY is not configured in environment. Skipping direct route.');
+      throw new Error('YOUTUBE_INNERTUBE_API_KEY is missing in wrangler configuration.');
+    }
+
     const innertubeUrl = `https://www.youtube.com/youtubei/v1/player?key=${innertubeKey}`;
 
-    // Daftar agen resmi YouTube dengan rotasi device app untuk bypass filter
+    // Payload resmi dengan konfigurasi client real-world untuk merotasi request
     const clients = [
       {
         name: 'ANDROID Mobile App Client',
@@ -15,13 +22,13 @@ export class InnerTubeClient {
           context: {
             client: {
               clientName: 'ANDROID',
-              clientVersion: '19.05.36',
+              clientVersion: env.YOUTUBE_CLIENT_VERSION_ANDROID || '19.05.36',
               androidSdkVersion: 31,
               hl: 'id',
-              gl: 'ID',
-            },
-          },
-        },
+              gl: 'ID'
+            }
+          }
+        }
       },
       {
         name: 'IOS Mobile App Client',
@@ -30,13 +37,13 @@ export class InnerTubeClient {
           context: {
             client: {
               clientName: 'IOS',
-              clientVersion: '19.02.2',
+              clientVersion: env.YOUTUBE_CLIENT_VERSION_IOS || '19.02.2',
               deviceModel: 'iPhone16,2',
               hl: 'id',
-              gl: 'ID',
-            },
-          },
-        },
+              gl: 'ID'
+            }
+          }
+        }
       },
       {
         name: 'WEB Desktop Player Client',
@@ -45,13 +52,13 @@ export class InnerTubeClient {
           context: {
             client: {
               clientName: 'WEB',
-              clientVersion: '2.20240210.01.00',
+              clientVersion: env.YOUTUBE_CLIENT_VERSION_WEB || '2.20240210.01.00',
               hl: 'id',
-              gl: 'ID',
-            },
-          },
-        },
-      },
+              gl: 'ID'
+            }
+          }
+        }
+      }
     ];
 
     let lastError = null;
@@ -60,14 +67,11 @@ export class InnerTubeClient {
       try {
         let requestUrl = innertubeUrl;
         if (customProxy) {
-          // Jika proxy dipasang, rutekan request ke proxy server Anda untuk bypass IP datacenter Cloudflare
           requestUrl = `${customProxy.replace(/\/+$/, '')}/${encodeURIComponent(innertubeUrl)}`;
         }
 
-        logger.info(
-          `[InnerTube Client] Mengirim request ke YouTube Player API via ${client.name}...`
-        );
-
+        logger.info(`[InnerTube Client] Menghubungi InnerTube API via ${client.name}...`);
+        
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
 
@@ -75,32 +79,49 @@ export class InnerTubeClient {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
           },
           body: JSON.stringify(client.payload),
-          signal: controller.signal,
+          signal: controller.signal
         }).finally(() => clearTimeout(timeoutId));
 
         if (!response.ok) {
-          throw new Error(`Server Google merespon dengan status HTTP ${response.status}`);
+          throw new Error(`Google CDN merespon dengan status HTTP ${response.status}`);
         }
 
         const data = await response.json();
 
+        // 🚀 ENRICHED DIAGNOSTIC TELEMETRY: Membuka 'black box' kegagalan YouTube API secara detail
+        logger.info('[InnerTube Client] Player Response Diagnostics Evaluated:', {
+          client: client.name,
+          playabilityStatus: data?.playabilityStatus || null,
+          hasCaptions: Boolean(data?.captions),
+          hasVideoDetails: Boolean(data?.videoDetails),
+          hasStreamingData: Boolean(data?.streamingData),
+          hasMicroformat: Boolean(data?.microformat)
+        });
+
+        // Jika captions kosong, cetak potongan data mentah untuk investigasi forensik
+        if (!data?.captions) {
+          const rawString = JSON.stringify(data);
+          logger.warn(`[InnerTube Client] Captions is missing. Raw payload preview: ${rawString.substring(0, 1500)}...`);
+        }
+
         if (data?.playabilityStatus?.status === 'UNPLAYABLE') {
-          throw new Error(
-            `Video tidak dapat diputar: ${data?.playabilityStatus?.reason || 'Status Unplayable'}`
-          );
+          throw new Error(`Video is unplayable: ${data?.playabilityStatus?.reason || 'No reason provided'}`);
         }
 
         return data;
       } catch (err) {
-        logger.warn(`[InnerTube Client] Gagal menggunakan klien ${client.name}: ${err.message}`);
+        logger.warn(`[InnerTube Client] Client ${client.name} execution missed: ${err.message}`);
         lastError = err;
       }
     }
 
-    throw lastError || new Error('Seluruh agen InnerTube API gagal melakukan koneksi.');
+    if (lastError) {
+      throw lastError;
+    }
+
+    throw new Error('All InnerTube API execution chains failed.');
   }
 }
