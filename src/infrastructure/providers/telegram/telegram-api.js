@@ -42,12 +42,14 @@ export class TelegramApi {
     try {
       return await this.call('sendMessage', payload);
     } catch (error) {
-      // 🚀 ENTERPRISE FALLBACK SYSTEM: Jika parsing Markdown gagal akibat karakter liar, copot parse_mode dan kirim ulang sebagai Plain Text
+      // 🚀 RESILIENT FALLBACK SYSTEM: Ubah ke lowercase untuk deteksi universal. Jika ada masalah format, copot parse_mode dan kirim ulang sebagai Plain Text murni!
+      const errStr = (error.message || '').toLowerCase();
       if (
         payload.parse_mode &&
-        (error.message.includes("can't parse entities") ||
-          error.message.includes('parse_mode') ||
-          error.message.includes('Markdown'))
+        (errStr.includes("can't parse entities") ||
+          errStr.includes('parse_mode') ||
+          errStr.includes('markdown') ||
+          errStr.includes('bad request'))
       ) {
         delete payload.parse_mode;
         return await this.call('sendMessage', payload);

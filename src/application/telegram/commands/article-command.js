@@ -10,6 +10,11 @@ import { getYoutubePassTemplate } from '../../editorial/prompt/templates/youtube
 import { WORDPRESS_CATEGORY_MAP } from '../../../infrastructure/providers/wordpress/category-map.js';
 import { QueueManager } from '../../../infrastructure/queue/queue-manager.js';
 
+function escapeMarkdown(text) {
+  if (!text) return '';
+  return text.toString().replace(/[_*`[\]]/g, '\\$&');
+}
+
 export async function articleCommand(update, telegramApi, sessionManager, container, origin = null) {
   let state = await sessionManager.getState(update.chatId);
 
@@ -202,12 +207,15 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
 
     } catch (error) {
       await sessionManager.cancel(update.chatId);
-      // 🚀 SAFE RECOVERY: Kirimkan kegagalan transkripsi sebagai Plain Text murni (parameter ke-4 diset null) agar Telegram tidak crash
+      
+      // 🚀 DOUBLE-SAFETY: Saring karakter liar Markdown dari error message sebelum dikirim ke bot
+      const escapedError = escapeMarkdown(error.message);
+      
       return telegramApi.sendMessage(
         update.chatId,
-        `❌ Gagal memproses tautan YouTube:\n${error.message}\n\nSesi dibatalkan.`,
+        `❌ *Gagal memproses tautan YouTube:*\n\n${escapedError}\n\nSesi dibatalkan.`,
         null,
-        null
+        'Markdown'
       );
     }
   }
