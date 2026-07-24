@@ -10,8 +10,8 @@ export class SeoIndexMonitor {
     const startTime = Date.now();
     this.logger.info('Starting SEO micro-audit self-crawl', { articleUrl });
 
-    let html = '';
-    let httpStatus = 0;
+    let html;
+    let httpStatus;
 
     try {
       const response = await this.fetchWithRetry(articleUrl);

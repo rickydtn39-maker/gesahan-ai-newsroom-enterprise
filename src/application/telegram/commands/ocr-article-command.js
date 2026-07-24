@@ -24,7 +24,10 @@ export async function ocrArticleCommand(update, telegramApi, sessionManager, con
     return telegramApi.sendMessage(update.chatId, MESSAGES.OCR.INPUT_INVALID);
   }
 
-  await telegramApi.sendMessage(update.chatId, '🔍 *Memindai gambar/dokumen (OCR)...* Mohon tunggu sebentar.');
+  await telegramApi.sendMessage(
+    update.chatId,
+    '🔍 *Memindai gambar/dokumen (OCR)...* Mohon tunggu sebentar.'
+  );
 
   try {
     const downloadedFile = await telegramApi.downloadFile(fileId);
@@ -36,7 +39,7 @@ export async function ocrArticleCommand(update, telegramApi, sessionManager, con
 
     const draft = await sessionManager.get(update.chatId);
     const draftWithSource = attachSourceText(draft, extractedText);
-    
+
     // Amankan status draf ke pemrosesan editorial
     const lockedDraft = draftWithSource.copyWith({
       state: WORKFLOW_STATE.EDITORIAL_PROCESSING,
@@ -47,7 +50,6 @@ export async function ocrArticleCommand(update, telegramApi, sessionManager, con
 
     // 🚀 MASUKKAN PROSES ANALISIS GEMINI SELESAI OCR KE QUEUE MANAGER (ANTREAN)
     await QueueManager.add(update.chatId, update.userId, 'STAGE_1_INGEST', {}, container);
-
   } catch (error) {
     await sessionManager.cancel(update.chatId);
     return telegramApi.sendMessage(

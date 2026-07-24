@@ -12,20 +12,20 @@ export class EditorialEngine {
   async processStage1(draft) {
     const job = createEditorialJob(draft);
     const geminiPrompt = this.promptBuilder.buildGeminiPass(job);
-    
+
     return this.aiProvider.generate({
       prompt: geminiPrompt,
-      schema: GEMINI_INGEST_SCHEMA
+      schema: GEMINI_INGEST_SCHEMA,
     });
   }
 
   async processStage3(draft, stage1Result) {
     const job = createEditorialJob(draft);
     const chatGptPrompt = this.promptBuilder.buildChatGptPass(job, stage1Result);
-    
+
     return this.openaiProvider.generate({
       prompt: chatGptPrompt,
-      schema: true
+      schema: true,
     });
   }
 }

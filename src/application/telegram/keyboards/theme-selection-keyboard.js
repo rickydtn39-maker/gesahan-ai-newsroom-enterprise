@@ -3,10 +3,10 @@
 export function createThemeSelectionKeyboard(themes) {
   const buttons = themes.map((theme) => [
     {
-      text: `🎯 Tema ${theme.id}: ${theme.themeTitle.substring(0, 30)}...`
-    }
+      text: `🎯 Tema ${theme.id}: ${theme.themeTitle.substring(0, 30)}...`,
+    },
   ]);
-  
+
   // Menggunakan tombol penutup sesi yang lebih profesional dan terintegrasi
   buttons.push([{ text: '🏁 Selesai & Tutup' }]);
 

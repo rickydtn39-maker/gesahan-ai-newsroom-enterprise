@@ -21,26 +21,26 @@ export class GeminiProvider extends AiProvider {
         {
           parts: [
             {
-              text: request.prompt
-            }
-          ]
-        }
+              text: request.prompt,
+            },
+          ],
+        },
       ],
       generationConfig: {
         temperature: 0.2,
         // 🚀 INTEGRASI NATIVE JSON SCHEMA PADA ENDPOINT v1beta
         responseMimeType: request.schema ? 'application/json' : 'text/plain',
-        responseSchema: request.schema ? request.schema : undefined
-      }
+        responseSchema: request.schema ? request.schema : undefined,
+      },
     };
 
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       });
 
       const duration = Date.now() - startTime;
@@ -51,9 +51,7 @@ export class GeminiProvider extends AiProvider {
       if (!response.ok) {
         this.metrics.increment('gemini_api_errors', 1, { status: response.status });
         throw new Error(
-          `Stage 1 Gemini (${response.status}): ${
-            payload?.error?.message || 'Unknown error'
-          }`
+          `Stage 1 Gemini (${response.status}): ${payload?.error?.message || 'Unknown error'}`
         );
       }
 
@@ -73,7 +71,6 @@ export class GeminiProvider extends AiProvider {
       const parsed = JSON.parse(cleaned);
       this.logger.info('Gemini API call completed successfully', { durationMs: duration });
       return parsed;
-
     } catch (error) {
       this.logger.error('Gemini API execution failed', { error: error.message });
       throw error;

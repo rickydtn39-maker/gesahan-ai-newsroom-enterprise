@@ -68,8 +68,11 @@ export async function dispatchTelegramUpdate(update, services) {
     const config = services.container.resolve(TOKENS.CONFIGURATION);
     const whitelistRepo = services.container.resolve(TOKENS.WHITELIST_REPOSITORY);
 
-    const chatId = update.chatId || update.message?.chat?.id || update.callback_query?.message?.chat?.id;
-    const userId = Number(update.userId || update.message?.from?.id || update.callback_query?.from?.id);
+    const chatId =
+      update.chatId || update.message?.chat?.id || update.callback_query?.message?.chat?.id;
+    const userId = Number(
+      update.userId || update.message?.from?.id || update.callback_query?.from?.id
+    );
     const text = (update.text || update.message?.text || update.callback_query?.data || '').trim();
 
     if (chatId && Number(chatId) < 0) {
@@ -119,7 +122,12 @@ export async function dispatchTelegramUpdate(update, services) {
     const staticHandler = registry.staticCommands.get(text);
     if (staticHandler) {
       logger.info('Executing static command', { command: text });
-      return await staticHandler(update, services.telegramApi, services.sessionManager, services.container);
+      return await staticHandler(
+        update,
+        services.telegramApi,
+        services.sessionManager,
+        services.container
+      );
     }
 
     const draft = await services.sessionManager.get(chatId);
@@ -132,7 +140,12 @@ export async function dispatchTelegramUpdate(update, services) {
       if (draft?.state === WORKFLOW_STATE.WAITING_FEATURED_IMAGE && update.hasPhoto) {
         return await featuredImageCommand(update, services.telegramApi, services.sessionManager);
       }
-      return await ocrArticleCommand(update, services.telegramApi, services.sessionManager, services.container);
+      return await ocrArticleCommand(
+        update,
+        services.telegramApi,
+        services.sessionManager,
+        services.container
+      );
     }
 
     if (draft?.state === WORKFLOW_STATE.WAITING_MANUAL_EDIT) {
@@ -140,26 +153,31 @@ export async function dispatchTelegramUpdate(update, services) {
     }
 
     if (draft?.state === WORKFLOW_STATE.WAITING_ANGLE) {
-      return await angleSaveCommand(update, services.telegramApi, services.sessionManager, services.container);
+      return await angleSaveCommand(
+        update,
+        services.telegramApi,
+        services.sessionManager,
+        services.container
+      );
     }
 
     // 🚀 FIXED: Meneruskan parameter services.origin agar terdeteksi sempurna di Engine 1
     return await articleCommand(
-      update, 
-      services.telegramApi, 
-      services.sessionManager, 
-      services.container, 
+      update,
+      services.telegramApi,
+      services.sessionManager,
+      services.container,
       services.origin
     );
-
   } catch (error) {
-    logger.error('Critical unhandled error in dispatcher', { 
-      error: error.message, 
-      stack: error.stack 
+    logger.error('Critical unhandled error in dispatcher', {
+      error: error.message,
+      stack: error.stack,
     });
 
-    const targetChatId = update.chatId || update.message?.chat?.id || update.callback_query?.message?.chat?.id;
-    
+    const targetChatId =
+      update.chatId || update.message?.chat?.id || update.callback_query?.message?.chat?.id;
+
     if (targetChatId) {
       try {
         await services.sessionManager.cancel(targetChatId);

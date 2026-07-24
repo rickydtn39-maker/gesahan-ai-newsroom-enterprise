@@ -61,14 +61,18 @@ export class SeoTelegramReporter {
       `*${scoring.score} / 100*`,
       `*${scoring.health.toUpperCase()}*`,
       '',
-      ...(audit.sitemapPresent ? ['🟢 *READY TO CRAWL*'] : ['🟡 *PENDING CRAWL* (Waiting sitemap sync)'])
+      ...(audit.sitemapPresent
+        ? ['🟢 *READY TO CRAWL*']
+        : ['🟡 *PENDING CRAWL* (Waiting sitemap sync)']),
     ].join('\n');
 
     try {
       await this.telegramApi.sendMessage(chatId, message);
     } catch (error) {
       if (this.logger) {
-        this.logger.error('Failed to dispatch SEO telegram report message', { error: error.message });
+        this.logger.error('Failed to dispatch SEO telegram report message', {
+          error: error.message,
+        });
       } else {
         console.error('Failed to dispatch SEO telegram report message', error);
       }

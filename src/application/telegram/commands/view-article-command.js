@@ -18,25 +18,28 @@ export async function viewArticleCommand(update, telegramApi, sessionManager) {
     return telegramApi.sendMessage(update.chatId, 'Artikel belum tersedia.');
   }
 
-  const article = draft.editorial.article;
+  // 🚀 PROTEKSI CRITICAL: Mengamankan properti article dari kegagalan state null
+  const article = draft.editorial?.article ?? { title: 'Tanpa Judul', lead: '', content: '' };
 
   // 🚀 LANGKAH PENGAMANAN SANGAT KETAT: Escape karakter Markdown bawaan teks rilis,
   // baru kemudian ubah headings Markdown (#) menjadi Bold khusus di Telegram (*■ Heading*)
-  const cleanContent = escapeMarkdown(article.content)
-    .replace(/^#{1,4}\s+(.+?)\r?$/gm, '*■ $1*');
+  const cleanContent = escapeMarkdown(article.content || '').replace(
+    /^#{1,4}\s+(.+?)\r?$/gm,
+    '*■ $1*'
+  );
 
   return telegramApi.sendMessage(
     update.chatId,
     [
       '📰 *JUDUL*',
       '',
-      escapeMarkdown(article.title),
+      escapeMarkdown(article.title || 'Tanpa Judul'),
       '',
       '━━━━━━━━━━━━━━━━━━',
       '',
       '📝 *LEAD*',
       '',
-      escapeMarkdown(article.lead),
+      escapeMarkdown(article.lead || ''),
       '',
       '━━━━━━━━━━━━━━━━━━',
       '',

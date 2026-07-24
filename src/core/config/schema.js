@@ -29,7 +29,8 @@ export const CONFIG_SCHEMA = Object.freeze({
       required: false,
       type: 'array',
     },
-    groupChatId: { // 🚀 Skema validasi pengaman untuk ID Grup Redaksi
+    groupChatId: {
+      // 🚀 Skema validasi pengaman untuk ID Grup Redaksi
       required: false,
       type: 'string',
     },

@@ -10,11 +10,11 @@ export class IndexNowService {
   async submit(articleUrl) {
     if (!this.indexNowKey || !this.sitemapUrl) {
       this.logger.warn('IndexNow skipped: key or host is not configured.');
-      return { 
-        success: false, 
-        status: 0, 
-        error: 'Configuration Missing', 
-        message: 'Key or host is not defined in environment.' 
+      return {
+        success: false,
+        status: 0,
+        error: 'Configuration Missing',
+        message: 'Key or host is not defined in environment.',
       };
     }
 
@@ -32,8 +32,10 @@ export class IndexNowService {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        this.logger.info(`Sending IndexNow request (Attempt ${attempt}/${maxRetries})`, { articleUrl });
-        
+        this.logger.info(`Sending IndexNow request (Attempt ${attempt}/${maxRetries})`, {
+          articleUrl,
+        });
+
         const response = await fetch(url, {
           method: 'POST',
           headers: {
@@ -43,7 +45,10 @@ export class IndexNowService {
         });
 
         if (response.ok) {
-          this.logger.info('IndexNow submission successful', { articleUrl, status: response.status });
+          this.logger.info('IndexNow submission successful', {
+            articleUrl,
+            status: response.status,
+          });
           return { success: true, status: response.status, error: null };
         }
 
@@ -51,19 +56,20 @@ export class IndexNowService {
         const errorInstance = new Error(errorDetails);
         errorInstance.status = response.status; // 🚀 Menyimpan status aslinya langsung tanpa parsing string
         throw errorInstance;
-
       } catch (error) {
-        this.logger.warn(`IndexNow submission failed on attempt ${attempt}`, { error: error.message });
-        
+        this.logger.warn(`IndexNow submission failed on attempt ${attempt}`, {
+          error: error.message,
+        });
+
         if (attempt === maxRetries) {
           const status = error.status || 500;
-          return { 
-            success: false, 
-            status: status, 
-            error: this.mapHttpStatus(status) 
+          return {
+            success: false,
+            status: status,
+            error: this.mapHttpStatus(status),
           };
         }
-        
+
         await new Promise((resolve) => setTimeout(resolve, delay));
         delay *= 2; // Exponential backoff
       }
@@ -77,7 +83,7 @@ export class IndexNowService {
       case 403:
         return '403 Forbidden (Key/Host mismatch or key.txt not found)';
       case 422:
-        return '422 Unprocessable (URL doesn\'t belong to host)';
+        return "422 Unprocessable (URL doesn't belong to host)";
       case 429:
         return '429 Rate Limited (Too many requests)';
       case 500:

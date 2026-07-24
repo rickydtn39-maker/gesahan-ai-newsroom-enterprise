@@ -17,7 +17,7 @@ export const TOKENS = Object.freeze({
   OCR_PROVIDER: 'ocr-provider',
   SEO_PROVIDER: 'seo-provider',
   EVENT_BUS: 'event-bus',
-  
+
   // 🚀 TOKEN BARU UNTUK MODUL SEO INTELLIGENCE SUITE
   SEO_INTELLIGENCE: 'seo-intelligence',
 });

@@ -1,3 +1,5 @@
+// FILE: src/app/handlers/assemblyai-webhook-handler.js
+
 import { CONTENT_TYPE, HTTP_STATUS, WORKFLOW_STATE } from '../../core/constants/index.js';
 import { TOKENS } from '../../core/container/tokens.js';
 import { QueueManager } from '../../infrastructure/queue/queue-manager.js';
@@ -47,8 +49,7 @@ export async function assemblyAiWebhookHandler(request, context) {
         '🎙️ *Transkripsi Audio Selesai!* Mengunduh teks transkrip...'
       );
 
-      const apiKey = context.configuration.openai.apiKey; // Ambil key dari config aman
-      // Unduh transkrip teks lengkap dari AssemblyAI
+      // Unduh transkrip teks lengkap dari AssemblyAI menggunakan kredensial dari config
       const transcriptResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${payload.transcript_id}`, {
         headers: {
           'authorization': context.configuration.openai.apiKey || context.configuration.gemini.apiKey // Amankan fallback key
@@ -93,7 +94,9 @@ export async function assemblyAiWebhookHandler(request, context) {
     await telegramApi.sendMessage(chatId, `❌ *Sistem Webhook Error:* ${error.message}`);
     try {
       await sessionManager.cancel(chatId);
-    } catch (_e) {}
+    } catch (_e) {
+      /* ignored */
+    }
     return new Response(JSON.stringify({ error: error.message }), {
       status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       headers: { 'content-type': CONTENT_TYPE.JSON },

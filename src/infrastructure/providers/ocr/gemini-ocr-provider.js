@@ -23,37 +23,35 @@ export class GeminiOcrProvider {
         {
           parts: [
             {
-              text: 'Ekstrak seluruh teks dari gambar atau dokumen ini secara lengkap. Jangan melakukan ringkasan. Jangan menambahkan komentar. Jangan memperbaiki isi. Salin apa adanya.'
+              text: 'Ekstrak seluruh teks dari gambar atau dokumen ini secara lengkap. Jangan melakukan ringkasan. Jangan menambahkan komentar. Jangan memperbaiki isi. Salin apa adanya.',
             },
             {
               inlineData: {
                 mimeType: mimeType || 'image/jpeg',
-                data: base64
-              }
-            }
-          ]
-        }
+                data: base64,
+              },
+            },
+          ],
+        },
       ],
       generationConfig: {
-        temperature: 0
-      }
+        temperature: 0,
+      },
     };
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
 
     const payload = await response.json();
 
     if (!response.ok) {
       throw new Error(
-        `Gemini OCR (${response.status}): ${
-          payload?.error?.message || 'Unknown error'
-        }`
+        `Gemini OCR (${response.status}): ${payload?.error?.message || 'Unknown error'}`
       );
     }
 

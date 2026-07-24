@@ -29,7 +29,7 @@ export async function telegramWebhookHandler(request, context) {
 
   const telegramApi = context.container.resolve(TOKENS.TELEGRAM_API);
   const sessionManager = context.container.resolve(TOKENS.SESSION_MANAGER);
-  
+
   // 🚀 DETEKSI DOMAIN AKTIF DARI REQUEST MASUK UNTUK ASSEMBLYAI WEBHOOK
   const origin = new URL(request.url).origin;
 

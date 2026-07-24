@@ -18,9 +18,7 @@ export class Router {
     const url = new URL(request.url);
     const method = request.method.toUpperCase();
 
-    const route = this.#routes.find(
-      (item) => item.method === method && item.path === url.pathname
-    );
+    const route = this.#routes.find((item) => item.method === method && item.path === url.pathname);
 
     if (!route) {
       return new Response(

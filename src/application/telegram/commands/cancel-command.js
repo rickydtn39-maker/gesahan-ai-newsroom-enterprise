@@ -1,3 +1,5 @@
+// FILE: src/application/telegram/commands/cancel-command.js
+
 import { MESSAGES } from '../../../core/constants/messages.js';
 import { createStartKeyboard } from '../keyboards/index.js';
 
@@ -15,7 +17,7 @@ export async function cancelCommand(update, telegramApi, sessionManager) {
       MESSAGES.WORKFLOW.CANCELLED,
       createStartKeyboard() // 🚀 WAJIB KLIK START: Menyodorkan tombol Mulai Ulang
     );
-  } catch (error) {
+  } catch (_error) {
     return await telegramApi.sendMessage(
       chatId,
       '✅ Sesi berhasil dibatalkan dan direset. Silakan tekan /start untuk memulai kembali.',

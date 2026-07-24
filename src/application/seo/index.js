@@ -11,7 +11,7 @@ export class SeoIntelligenceSuite {
   constructor(logger, config, kvNamespace, d1Database, telegramApi) {
     this.logger = logger;
     this.config = config;
-    
+
     // Inisialisasi Service Modular Internal
     this.monitor = new SeoIndexMonitor(logger, config.seo.sitemapUrl);
     this.validator = new SeoValidator();
@@ -38,7 +38,7 @@ export class SeoIntelligenceSuite {
       // dan memastikan notifikasi Telegram Sukses Terbit mendarat terlebih dahulu.
       // =========================================================================
       await new Promise((resolve) => setTimeout(resolve, 4000));
-      
+
       // 2. Mulai Audit Monitor (Stage 6)
       const auditResult = await this.monitor.audit(articleUrl);
 
@@ -68,13 +68,20 @@ export class SeoIntelligenceSuite {
         internalLinks: auditResult.internalLinksCount,
         externalLinks: auditResult.externalLinksCount,
         indexNowStatus: indexNowResponse.status,
-        seoScore: scoring.score
+        seoScore: scoring.score,
       };
       await this.analyticsLogger.saveReport(reportPayload);
 
       // 6. Kirim Laporan ke Telegram Chat Pribadi Wartawan (Telegram Report)
       if (chatId) {
-        await this.reporter.send(chatId, auditResult, validation, scoring, indexNowResponse, articleUrl);
+        await this.reporter.send(
+          chatId,
+          auditResult,
+          validation,
+          scoring,
+          indexNowResponse,
+          articleUrl
+        );
       }
 
       // 7. Broadcast: Kirim Salinan Laporan ke Grup Redaksi (Jika terpasang di wrangler.jsonc)
@@ -90,16 +97,19 @@ export class SeoIntelligenceSuite {
           );
         } catch (groupReportError) {
           this.logger.error('Failed to broadcast SEO report to Telegram Group', {
-            error: groupReportError.message
+            error: groupReportError.message,
           });
         }
       }
 
-      this.logger.info('SEO Intelligence Suite completed analysis successfully', { postId, score: scoring.score });
+      this.logger.info('SEO Intelligence Suite completed analysis successfully', {
+        postId,
+        score: scoring.score,
+      });
     } catch (suiteError) {
       this.logger.error('SEO Intelligence Suite suite executed with errors', {
         error: suiteError.message,
-        stack: suiteError.stack
+        stack: suiteError.stack,
       });
     }
   }

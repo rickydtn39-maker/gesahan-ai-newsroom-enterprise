@@ -1,8 +1,13 @@
+// FILE: src/infrastructure/providers/wordpress/wordpress-provider.js
+
 import { WORDPRESS_CATEGORY_MAP } from './category-map.js';
 
 export class WordPressProvider {
   constructor(configuration) {
-    this.endpoint = configuration.wordpress.endpoint;
+    // 🚀 SANITASI LENGKAP: Amankan dari trailing slash yang menyebabkan kegagalan 403/404 CDN
+    this.endpoint = configuration.wordpress.endpoint
+      ? configuration.wordpress.endpoint.replace(/\/+$/, '')
+      : '';
     this.username = configuration.wordpress.username;
     this.applicationPassword = configuration.wordpress.applicationPassword;
   }
@@ -35,7 +40,7 @@ export class WordPressProvider {
   }
 
   async createTags(tags = [], customAuth = null) {
-    if (!tags || tags.length === 0) return [];
+    if (!tags || !Array.isArray(tags) || tags.length === 0) return [];
 
     // 🚀 HIGH PERFORMANCE PARALLEL TAG PROCESSING WITH EXACT MATCH VALIDATION
     const tagPromises = tags.map(async (tag) => {
@@ -75,6 +80,13 @@ export class WordPressProvider {
         if (created.ok) {
           const createdPayload = await created.json();
           return createdPayload.id;
+        } else {
+          // 🚀 HANDLING ERROR TERM_EXISTS (HTTP 400):
+          // Jika tag sudah dibuat oleh proses paralel lain, dapatkan ID tag yang sudah ada.
+          const createdPayload = await created.json();
+          if (createdPayload.code === 'term_exists') {
+            return createdPayload.data.term_id;
+          }
         }
       } catch (_error) {
         return null;
@@ -89,7 +101,9 @@ export class WordPressProvider {
   async createPost(editorial, mediaId, customAuth = null) {
     const tagIds = await this.createTags(editorial.seo.tags, customAuth);
 
-    const categoryName = editorial.seo.category ? editorial.seo.category.trim().toUpperCase() : 'BERITA';
+    const categoryName = editorial.seo.category
+      ? editorial.seo.category.trim().toUpperCase()
+      : 'BERITA';
     const categoryId = WORDPRESS_CATEGORY_MAP[categoryName] ?? 1;
 
     // 🔄 PARSER RESILIEN MULTILINE UNTUK HEADINGS HTML

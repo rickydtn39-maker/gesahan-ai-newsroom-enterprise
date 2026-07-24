@@ -4,7 +4,7 @@ export class SessionManager {
   constructor(draftRepository) {
     this.draftRepository = draftRepository;
     // Batas waktu toleransi jika proses AI/WordPress hang (3 menit)
-    this.MAX_PROCESSING_TIME_MS = 3 * 60 * 1000; 
+    this.MAX_PROCESSING_TIME_MS = 3 * 60 * 1000;
   }
 
   async get(chatId) {
@@ -34,7 +34,7 @@ export class SessionManager {
     }
 
     const initialDraft = createDraft(chatId, userId);
-    
+
     // 🚀 Menambahkan timestamp secara imutabel menggunakan copyWith
     const draftWithTime = initialDraft.copyWith({
       createdAt: new Date().toISOString(),

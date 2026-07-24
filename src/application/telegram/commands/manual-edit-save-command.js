@@ -1,3 +1,5 @@
+// FILE: src/application/telegram/commands/manual-edit-save-command.js
+
 import { WORKFLOW_STATE } from '../../../core/constants/index.js';
 import { createReviewKeyboard } from '../keyboards/index.js';
 import { MESSAGES } from '../../../core/constants/messages.js';
@@ -17,9 +19,16 @@ export async function manualEditSaveCommand(update, telegramApi, sessionManager)
     return telegramApi.sendMessage(update.chatId, 'Silakan kirim teks artikel yang sudah diedit.');
   }
 
+  // 🚀 DEFENSIVE HYDRATION: Menjamin properti SEO tidak ter-wipe jika draf editorial bernilai parsial/null
   const previous = draft.editorial ?? {
     article: {},
-    seo: {},
+    seo: {
+      focusKeyword: draft.stage1?.seo?.focusKeyword ?? '',
+      metaDescription: draft.stage1?.seo?.metaDescription ?? '',
+      category: draft.stage1?.wordpress?.category ?? 'BERITA',
+      tags: draft.stage1?.wordpress?.tags ?? [],
+      slug: '',
+    },
     statistics: {},
     quality: {},
   };

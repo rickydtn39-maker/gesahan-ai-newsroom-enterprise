@@ -15,13 +15,12 @@ export function registerSeoSubscriber(container) {
 
     // 1. Jalankan Traditional Pings (Sitemap Bing & WebSub Google) secara instan
     try {
-      await Promise.all([
-        seoProvider.pingSitemap(),
-        seoProvider.pingRssFeed(),
-      ]);
+      await Promise.all([seoProvider.pingSitemap(), seoProvider.pingRssFeed()]);
       logger.info('Traditional Search Engine XML Pings broadcast completed');
     } catch (pingError) {
-      logger.error('XML Sitemap/RSS Ping Broadcast experienced minor failures', { error: pingError.message });
+      logger.error('XML Sitemap/RSS Ping Broadcast experienced minor failures', {
+        error: pingError.message,
+      });
     }
 
     // =========================================================================
@@ -37,8 +36,10 @@ export function registerSeoSubscriber(container) {
       ctx.waitUntil(auditPromise);
     } else {
       logger.warn('Cloudflare context is absent. Executing audit without system shielding');
-      auditPromise.catch(auditError => {
-        logger.error('Background SEO Intelligence Suite execution failed', { error: auditError.message });
+      auditPromise.catch((auditError) => {
+        logger.error('Background SEO Intelligence Suite execution failed', {
+          error: auditError.message,
+        });
       });
     }
   });

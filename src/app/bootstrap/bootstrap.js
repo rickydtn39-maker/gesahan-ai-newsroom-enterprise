@@ -25,16 +25,21 @@ export async function bootstrap(request, env, ctx) {
   } catch (error) {
     console.error(`[FATAL SYSTEM INITIALIZATION ERROR] CorrelationID: ${correlationId}`, {
       message: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
 
     return new Response(
-      JSON.stringify({
-        error: error.code || 'SYSTEM_INITIALIZATION_ERROR',
-        message: error.message || 'Fatal system initialization error.',
-        correlationId,
-        diagnostics: 'Please verify if ENCRYPTION_SECRET is correctly set using wrangler secrets.'
-      }, null, 2),
+      JSON.stringify(
+        {
+          error: error.code || 'SYSTEM_INITIALIZATION_ERROR',
+          message: error.message || 'Fatal system initialization error.',
+          correlationId,
+          diagnostics:
+            'Please verify if ENCRYPTION_SECRET is correctly set using wrangler secrets.',
+        },
+        null,
+        2
+      ),
       {
         status: error.status || HTTP_STATUS.INTERNAL_SERVER_ERROR,
         headers: {

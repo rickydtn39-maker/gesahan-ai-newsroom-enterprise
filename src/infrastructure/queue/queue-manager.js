@@ -83,6 +83,11 @@ export class QueueManager {
     try {
       if (task.taskType === 'STAGE_1_INGEST') {
         const lockedDraft = await sessionManager.get(task.chatId);
+        if (!lockedDraft) {
+          logger.warn('STAGE_1_INGEST skipped: draft session not found or cancelled', { chatId: task.chatId });
+          return;
+        }
+
         const editorialService = container.resolve(TOKENS.EDITORIAL_SERVICE);
         const stage1Result = await editorialService.ingestStage1(lockedDraft);
 
@@ -119,6 +124,11 @@ export class QueueManager {
       
       else if (task.taskType === 'STAGE_3_GENERATE') {
         const draft = await sessionManager.get(task.chatId);
+        if (!draft) {
+          logger.warn('STAGE_3_GENERATE skipped: draft session not found or cancelled', { chatId: task.chatId });
+          return;
+        }
+
         const editorialService = container.resolve(TOKENS.EDITORIAL_SERVICE);
         const result = await editorialService.generate(draft, draft.stage1);
 
@@ -187,6 +197,11 @@ export class QueueManager {
       
       else if (task.taskType === 'PUBLISH') {
         const draft = await sessionManager.get(task.chatId);
+        if (!draft) {
+          logger.warn('PUBLISH skipped: draft session not found or cancelled', { chatId: task.chatId });
+          return;
+        }
+
         const publishingService = container.resolve(TOKENS.PUBLISHING_SERVICE);
         const published = await publishingService.publish(draft);
 
@@ -243,7 +258,7 @@ export class QueueManager {
 
         if (remainingThemes.length > 0) {
           const updatedMultiDraft = draft.copyWith({
-            state: 'WAITING_THEME_SELECTION',
+            state: WORKFLOW_STATE.WAITING_THEME_SELECTION,
             stage1: null,
             editorial: null,
             angle: null,
@@ -296,7 +311,9 @@ export class QueueManager {
       );
       try {
         await sessionManager.cancel(task.chatId);
-      } catch (_e) {}
+      } catch (_e) {
+        /* ignored */
+      }
     } finally {
       // =========================================================================
       // 🚀 PENANGANAN PELEPASAN KUNCI & TRANSTRANSFER ANTREAN BERIKUTNYA
