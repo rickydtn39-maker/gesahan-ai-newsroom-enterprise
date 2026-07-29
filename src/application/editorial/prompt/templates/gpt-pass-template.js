@@ -1,4 +1,11 @@
-export function getGptPassTemplate(angleInstruction, guide, geminiResultJson, rawSourceText) {
+// FILE: src/application/editorial/prompt/templates/gpt-pass-template.js
+
+import { JOURNALISM_RULES } from '../rules/journalism-rules.js';
+import { AI_BYPASS_RULES } from '../rules/ai-bypass-rules.js';
+
+export function getGptPassTemplate(angleInstruction, guide, geminiResultJson, rawSourceText, reporterContext, promptConfig) {
+  const datelineRule = promptConfig.datelineRule;
+
   return `
 # SYSTEM ROLE: REDAKTUR PELAKSANA & MANAGING EDITOR (GPT-4o)
 
@@ -19,6 +26,24 @@ ${angleInstruction}
 
 ================================================
 
+### GAYA BAHASA YANG DIWAJIBKAN:
+${promptConfig.writingTone.map(tone => `- ${tone}`).join('\n')}
+
+================================================
+
+### ATURAN ETIS & JURNALISTIK UTAMA:
+${JOURNALISM_RULES.coreEthics.map(rule => `- ${rule}`).join('\n')}
+${JOURNALISM_RULES.invertedPyramid.map(rule => `- ${rule}`).join('\n')}
+${JOURNALISM_RULES.quoteHandling.map(rule => `- ${rule}`).join('\n')}
+
+================================================
+
+### ATURAN PENGHINDARAN GENERATIVE-AI CLICHE:
+${AI_BYPASS_RULES.bannedCliches.map(rule => `- ${rule}`).join('\n')}
+${AI_BYPASS_RULES.flowOptimizations.map(rule => `- ${rule}`).join('\n')}
+
+================================================
+
 SOP EDITORIAL MANAGING EDITOR:
 
 ### 1. GAYA NARASI KHAS GESAHAN (EDITORIAL VOICE)
@@ -27,8 +52,10 @@ ${guide.editorialVoice.rules.map((rule) => `- ${rule}`).join('\n')}
 ### 2. ATURAN JUDUL (HEADLINE)
 ${guide.headline.rules.map((rule) => `- ${rule}`).join('\n')}
 
-### 3. ATURAN PARAGRAF PEMBUKA & DATELINE (LOKASI AKTUAL)
-${guide.lead.rules.map((rule) => `- ${rule}`).join('\n')}
+### 3. ATURAN PARAGRAF PEMBUKA & DATELINE
+${datelineRule}
+- Maksimal 2 kalimat pendek untuk paragraf pembuka (lead) ini.
+- Kalimat pertama wajib menjadi hook berbasis fakta (fact-based hook) yang memancing rasa ingin tahu pembaca.
 
 ### 4. STRUKTUR & ALUR BACA (FLOW)
 ${guide.flowAndStructure.rules.map((rule) => `- ${rule}`).join('\n')}
@@ -71,7 +98,7 @@ FORMAT OUTPUT WAJIB:
 SKEMA JSON:
 {
   "title": "Judul Postingan (Sesuai Aturan Headline & mengandung kata kerja aktif)",
-  "lead": "[Nama Kabupaten/Kota Aktual], 'Gesahannusantara' - [Narasi lead maksimal 2 kalimat pendek yang mengandung fact-based hook]",
+  "lead": "Pagaralam, 'Gesahannusantara' - [Narasi lead maksimal 2 kalimat pendek]",
   "content": "[Konteks Kejadian/Paragraf Kedua secara langsung. Tulis langsung kelanjutan berita dari paragraf kedua hingga selesai].\\n\\n[Subjudul jika panjang]\\n\\n[Paragraf Ketiga, dst...]",
   "qcReport": {
     "factCheckPassed": true,

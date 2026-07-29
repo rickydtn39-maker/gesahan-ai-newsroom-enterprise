@@ -90,7 +90,8 @@ export function createContainer(configuration, env, ctx = null, correlationId = 
       new EditorialService(
         c.resolve(TOKENS.EDITORIAL_ENGINE),
         c.resolve(TOKENS.LOGGER),
-        c.resolve(TOKENS.METRICS)
+        c.resolve(TOKENS.METRICS),
+        c.resolve(TOKENS.WHITELIST_REPOSITORY) // 🚀 DI SUNTIKKAN DISINI
       )
   );
 

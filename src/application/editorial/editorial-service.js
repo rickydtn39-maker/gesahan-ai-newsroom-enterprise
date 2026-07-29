@@ -1,3 +1,5 @@
+// FILE: src/application/editorial/editorial-service.js
+
 import { EditorialResult } from './models/index.js';
 import { EditorialValidator } from './validator/index.js';
 
@@ -16,11 +18,40 @@ function slugify(text) {
 }
 
 export class EditorialService {
-  constructor(editorialEngine, logger, metrics) {
+  constructor(editorialEngine, logger, metrics, whitelistRepository) {
     this.editorialEngine = editorialEngine;
     this.validator = new EditorialValidator();
     this.logger = logger;
     this.metrics = metrics;
+    this.whitelistRepository = whitelistRepository; // 🚀 Menyimpan whitelist repositori
+  }
+
+  async getReporterContext(userId) {
+    try {
+      const whitelist = await this.whitelistRepository.getAll();
+      const user = whitelist.find((u) => Number(u.userId) === Number(userId));
+      
+      const name = user ? user.name : `Wartawan #${userId}`;
+      const lowerName = name.toLowerCase();
+
+      let type = 'GENERAL';
+      if (lowerName.includes('pagaralam')) {
+        type = 'POLRES_PAGARALAM';
+      } else if (lowerName.includes('palembang')) {
+        type = 'POLRESTABES_PALEMBANG';
+      }
+
+      return {
+        name,
+        type
+      };
+    } catch (error) {
+      this.logger.error('Failed to build reporter context, falling back to default', { error: error.message });
+      return {
+        name: 'Wartawan',
+        type: 'GENERAL'
+      };
+    }
   }
 
   async ingestStage1(draft) {
@@ -28,7 +59,8 @@ export class EditorialService {
     this.logger.info('Stage 1 Ingest Engine starting', { chatId: draft.chatId });
 
     try {
-      const rawResult = await this.editorialEngine.processStage1(draft);
+      const reporterContext = await this.getReporterContext(draft.userId);
+      const rawResult = await this.editorialEngine.processStage1(draft, reporterContext);
       const validated = this.validator.validateIngest(rawResult);
 
       this.metrics.timing('stage1_duration', Date.now() - startTime);
@@ -44,7 +76,8 @@ export class EditorialService {
     this.logger.info('Stage 3 Editorial Engine starting', { draftId: draft.id });
 
     try {
-      const rawResult = await this.editorialEngine.processStage3(draft, stage1Result);
+      const reporterContext = await this.getReporterContext(draft.userId);
+      const rawResult = await this.editorialEngine.processStage3(draft, stage1Result, reporterContext);
       const validated = this.validator.validateEditorial(rawResult);
 
       const fullText = `${validated.lead}\n\n${validated.content}`;

@@ -1,15 +1,36 @@
-export function getGeminiPassTemplate(allowedCategories, rawSourceText) {
+// FILE: src/application/editorial/prompt/templates/gemini-pass-template.js
+
+import { JOURNALISM_RULES } from '../rules/journalism-rules.js';
+
+export function getGeminiPassTemplate(allowedCategories, rawSourceText, reporterContext, promptConfig) {
+  const customCategoryInstruction = promptConfig.geminiCategoryRule(reporterContext.name);
+  
+  const fallbackRule = promptConfig.fallbackCategory
+    ? `* Jika wartawan adalah ${reporterContext.name} -> Pilih Kategori: **${promptConfig.fallbackCategory}**`
+    : `* Pilih kategori ter-spesifik sesuai pohon keputusan di bawah ini.`;
+
   return `
-# SYSTEM ROLE: REPORTER DIGITAL & NEWS ANALYST (GEMINI v2.5)
+# SYSTEM ROLE: SENIOR REPORTER & CHIEF EDITORIAL ANALYST (GEMINI v2.5)
 
-Tugas Anda adalah membaca, memindai (OCR jika gambar), mengekstrak struktur fakta secara presisi, menganalisis nilai berita, dan menyusun draf laporan wartawan pertama (75% jadi).
+Tugas Anda adalah membaca, memindai (OCR jika gambar), mengekstrak struktur fakta secara presisi, menganalisis nilai berita, dan menentukan klasifikasi kategori terbaik sesuai dengan Standar Redaksi Gesahan Nusantara.
 
-### DAFTAR KATEGORI VALID:
+================================================
+
+### DAFTAR KATEGORI VALID (PILIH HANYA DARI DAFTAR INI):
 [${allowedCategories}]
 
 ================================================
 
-PANDUAN EXTRACTION & KATEGORISASI:
+${customCategoryInstruction}
+
+================================================
+
+### SOP JURNALISTIK UTAMA:
+${JOURNALISM_RULES.coreEthics.map(rule => `- ${rule}`).join('\n')}
+
+================================================
+
+### PANDUAN EXTRACTION & KATEGORISASI:
 1. Ekstrak data 5W+1H dan seluruh detail spesifik: Pangkat, Jabatan, Instansi, Barang Bukti, Nomor Perkara, Lokasi Spesifik, dan Kutipan Utama.
 2. Analisis Nilai Berita (News Value) berdasarkan skala 1-100 pada bidang Impact, Conflict, Human Interest, Novelty, dan Public Interest.
 3. Tentukan prioritas penerbitan:
@@ -21,12 +42,72 @@ PANDUAN EXTRACTION & KATEGORISASI:
 
 ================================================
 
-FORMAT OUTPUT WAJIB:
+### ATURAN PENENTUAN KATEGORI (MANDATORY DECISION-TREE):
+Anda harus menentukan SATU kategori WordPress yang PALING SPESIFIK dan TEPAT dari daftar kategori valid. Ikuti hierarki penentuan prioritas di bawah ini secara ketat:
+
+- **PRIORITAS Humas Khusus:**
+  ${fallbackRule}
+
+- **PRIORITAS 1 (INSTANSI / HUKUM & KRIMINAL):**
+  * Jika berita mengenai Polri, Polda, Polres, Polsek, Kapolri, Kapolda, Bareskrim, Satreskrim, Ditreskrimum, Ditlantas, Ditresnarkoba, Bhayangkara, atau upacara kepolisian -> Pilih Kategori: **KEPOLISIAN**
+  * Jika berita mengenai Kejagung, Kejati, Kejari, Jaksa, Penuntut Umum -> Pilih Kategori: **KEJAKSAAN**
+  * Jika berita mengenai Hakim, Pengadilan Negeri, Pengadilan Tinggi, Mahkamah Agung, Mahkamah Konstitusi, atau vonis sidang -> Pilih Kategori: **PENGADILAN**
+  * Jika berita mengenai kasus korupsi, gratifikasi, atau OTT Komisi Pemberantasan Korupsi -> Pilih Kategori: **KORUPSI**
+  * Jika berita mengenai peredaran narkoba, pil ekstasi, sabu, ganja, atau jaringan kurir barang haram -> Pilih Kategori: **NARKOBA**
+  * Jika berita mengenai kriminal umum, pencurian, pembunuhan, penipuan, penganiayaan -> Pilih Kategori: **KRIMINAL**
+
+- **PRIORITAS 2 (POLITIK & LEGISLATIF):**
+  * Jika berita mengenai Pemilu, KPU, Bawaslu, atau Pilpres -> Pilih Kategori: **PEMILU**
+  * Jika berita mengenai Pilkada, Cagub, Cabup, Cako, atau dinamika pemilihan daerah -> Pilih Kategori: **PILKADA**
+  * Jika berita mengenai partai politik, koalisi, atau pendaftaran kader -> Pilih Kategori: **PARTAI POLITIK**
+  * Jika berita mengenai DPR RI, parlemen pusat, atau anggota DPR RI -> Pilih Kategori: **DPR NASIONAL**
+  * Jika berita mengenai DPRD tingkat Provinsi/Kabupaten/Kota -> Pilih Kategori: **DPR POLITIK**
+  * Jika berita mengenai kinerja Pemerintah Pusat, Menteri, atau Kabinet -> Pilih Kategori: **PEMERINTAH**
+
+- **PRIORITAS 3 (EKONOMI & BISNIS):**
+  * Jika berita mengenai usaha mikro, kecil, menengah, atau bantuan modal -> Pilih Kategori: **UMKM**
+  * Jika berita mengenai Perbankan, Bank, OJK, BI, suku bunga -> Pilih Kategori: **PERBANKAN**
+  * Jika berita mengenai realisasi investasi, penanaman modal asing/dalam negeri -> Pilih Kategori: **INVESTASI**
+  * Jika berita mengenai sektor pertambangan, kelistrikan, migas, batubara -> Pilih Kategori: **ENERGI**
+  * Jika berita mengenai bisnis secara umum, pasar modal, korporasi -> Pilih Kategori: **BISNIS EKONOMI**
+
+- **PRIORITAS 4 (LIFESTYLE & TRAVEL):**
+  * Jika berita mengenai makanan, minuman, resep, festival kuliner -> Pilih Kategori: **KULINER**
+  * Jika berita mengenai pakaian, tren busana, model -> Pilih Kategori: **FASHION**
+  * Jika berita mengenai pariwisata, destinasi liburan, hotel -> Pilih Kategori: **TRAVEL**
+  * Jika berita mengenai komunitas sosial, aksi gotong royong, hobi -> Pilih Kategori: **KOMUNITAS**
+  * Jika berita mengenai otomotif sebagai gaya hidup, modifikasi kendaraan, pameran -> Pilih Kategori: **OTOMOTIF LIFESTYLE**
+
+- **PRIORITAS 5 (OLAHRAGA & OTOMOTIF UTAMA):**
+  * Jika berita mengenai pertandingan olahraga, turnamen, atlet -> Pilih Kategori: **OLAHRAGA**
+  * Jika berita mengenai industri otomotif, rilis mobil/motor baru, spesifikasi mesin -> Pilih Kategori: **OTOMOTIF**
+
+- **PRIORITAS 6 (INTERNASIONAL):**
+  * Jika berita mengenai peristiwa di luar negeri atau hubungan diplomatik global -> Pilih Kategori: **INTERNASIONAL**
+
+- **PRIORITAS 7 (REGIONAL/DAERAH - FALLBACK LOKASI):**
+  * Gunakan lokasi hanya apabila berita TIDAK memiliki topik khusus di atas.
+  * Provinsi Sumatera Selatan -> Pilih Kategori: **SUMSEL**
+  * Provinsi lain di pulau Sumatera -> Pilih Kategori: **SUMATERA**
+  * Pulau Jawa -> Pilih Kategori: **JAWA**
+  * Pulau Kalimantan -> Pilih Kategori: **KALIMANTAN**
+  * Pulau Sulawesi -> Pilih Kategori: **SULAWESI**
+  * Bali, NTB, NTT -> Pilih Kategori: **BALI & NUSA TENGGARA**
+  * Maluku -> Pilih Kategori: **MALUKU**
+  * Papua -> Pilih Kategori: **PAPUA**
+  * Jika daerah lainnya tanpa klasifikasi spesifik -> Pilih Kategori: **DAERAH**
+
+- **PRIORITAS TERAKHIR (FALLBACK ABSOLUT):**
+  * Jika benar-benar tidak ada kategori di atas yang cocok -> Pilih Kategori: **NASIONAL** atau **BERITA**
+
+================================================
+
+### FORMAT OUTPUT WAJIB:
 - HANYA KEMBALIKAN JSON VALID. 
 - JANGAN ADA TEKS APAPUN DI LUAR JSON.
-- Jangan menghilangkan field di bawah ini.
+- Nilai properti "category" pada objek "wordpress" WAJIB berupa salah satu teks uppercase dari daftar valid. Contoh: "POLRES PAGARALAM", "KEPOLISIAN", atau "SUMSEL".
 
-SKEMA JSON OUTPUT:
+### SKEMA JSON OUTPUT:
 {
   "extractedInfo": {
     "who": "Siapa saja tokoh utama",
@@ -51,7 +132,7 @@ SKEMA JSON OUTPUT:
     "metaDescription": "Deskripsi meta ringkas memikat pembaca"
   },
   "wordpress": {
-    "category": "Pilih satu kategori yang cocok dari daftar [${allowedCategories}]",
+    "category": "PILIH_NAMA_KATEGORI_UPPERCASE_YANG_SESUAI_ATURAN_HIERARKI",
     "tags": ["tag1", "tag2", "tag3", "tag4"]
   },
   "newsValue": {
@@ -75,7 +156,7 @@ SKEMA JSON OUTPUT:
 
 ================================================
 
-NASKAH MENTAH SUMBER:
+### NASKAH MENTAH SUMBER:
 ${rawSourceText}
 `.trim();
 }
