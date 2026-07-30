@@ -2,7 +2,12 @@
 
 import { TOKENS } from '../../core/container/tokens.js';
 import { WORKFLOW_STATE } from '../../core/constants/index.js';
-import { createAngleKeyboard, createReviewKeyboard, createMainKeyboard, createThemeSelectionKeyboard } from '../../application/telegram/keyboards/index.js';
+import {
+  createAngleKeyboard,
+  createReviewKeyboard,
+  createMainKeyboard,
+  createThemeSelectionKeyboard,
+} from '../../application/telegram/keyboards/index.js';
 
 const QUEUE_KEY = 'newsroom:global_queue';
 const MAX_LOCK_TIME_MS = 2 * 60 * 1000; // Proteksi antrean macet (2 Menit)
@@ -33,13 +38,15 @@ export class QueueManager {
     const now = Date.now();
 
     // Verifikasi apakah proses aktif saat ini sudah kedaluwarsa (lebih dari 2 menit)
-    const isLockExpired = queue.active && (now - queue.active.startedAt > MAX_LOCK_TIME_MS);
+    const isLockExpired = queue.active && now - queue.active.startedAt > MAX_LOCK_TIME_MS;
 
     if (!queue.active || isLockExpired) {
       if (isLockExpired) {
-        logger.warn('Previous queue lock expired, forcing release and executing new task', { expiredTask: queue.active });
+        logger.warn('Previous queue lock expired, forcing release and executing new task', {
+          expiredTask: queue.active,
+        });
       }
-      
+
       // Ambil kunci global dan jalankan langsung
       queue.active = { chatId, userId, userName, taskType, payload, startedAt: now };
       await kv.put(QUEUE_KEY, JSON.stringify(queue));
@@ -67,7 +74,7 @@ export class QueueManager {
           '',
           `Anda berada di *antrean nomor #${queueNumber}*.`,
           'Naskah Anda telah aman tersimpan di cloud dan akan diproses secara otomatis jika giliran Anda tiba. Mohon tunggu sejenak...',
-          '━━━━━━━━━━━━━━━━━━━━━━━━'
+          '━━━━━━━━━━━━━━━━━━━━━━━━',
         ].join('\n')
       );
     }
@@ -81,12 +88,49 @@ export class QueueManager {
     logger.info('Starting queued task execution', { taskType: task.taskType, userId: task.userId });
 
     try {
+      // 🚀 ENTERPRISE RATE LIMIT SHIELD:
+      // Suntikkan jeda ritmik wajib selama 3 detik sebelum setiap pemicuan AI.
+      // Ini memastikan request tersebar dengan jarak aman dan tidak melompati RPM kuota!
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
       if (task.taskType === 'STAGE_1_INGEST') {
-        const lockedDraft = await sessionManager.get(task.chatId);
+        let lockedDraft = await sessionManager.get(task.chatId);
         if (!lockedDraft) {
-          logger.warn('STAGE_1_INGEST skipped: draft session not found or cancelled', { chatId: task.chatId });
+          logger.warn('STAGE_1_INGEST skipped: draft session not found or cancelled', {
+            chatId: task.chatId,
+          });
           return;
         }
+
+        // 🔍 INTEGRASI PROSES OCR DALAM ANTREAN AMAN:
+        // Jika ada ocrFileId di payload, lakukan download & OCR secara berseri di bawah penguncian antrean
+        if (task.payload?.ocrFileId) {
+          await telegramApi.sendMessage(
+            task.chatId,
+            '🔍 *Giliran Anda Tiba!* Mulai mengunduh dokumen & menjalankan pemindaian OCR...'
+          );
+
+          const ocrProvider = container.resolve(TOKENS.OCR_PROVIDER);
+          const downloadedFile = await telegramApi.downloadFile(task.payload.ocrFileId);
+          const extractedText = await ocrProvider.extractText(
+            downloadedFile.buffer,
+            downloadedFile.mimeType
+          );
+
+          lockedDraft = lockedDraft.copyWith({
+            source: {
+              ...lockedDraft.source,
+              type: 'text',
+              text: extractedText,
+            },
+          });
+          await sessionManager.save(lockedDraft);
+        }
+
+        await telegramApi.sendMessage(
+          task.chatId,
+          '⏳ *[STAGE 1] Gemini Reporter* sedang memindai, menganalisis SEO, dan mengklasifikasikan data...'
+        );
 
         const editorialService = container.resolve(TOKENS.EDITORIAL_SERVICE);
         const stage1Result = await editorialService.ingestStage1(lockedDraft);
@@ -120,12 +164,12 @@ export class QueueManager {
           ].join('\n'),
           createAngleKeyboard()
         );
-      } 
-      
-      else if (task.taskType === 'STAGE_3_GENERATE') {
+      } else if (task.taskType === 'STAGE_3_GENERATE') {
         const draft = await sessionManager.get(task.chatId);
         if (!draft) {
-          logger.warn('STAGE_3_GENERATE skipped: draft session not found or cancelled', { chatId: task.chatId });
+          logger.warn('STAGE_3_GENERATE skipped: draft session not found or cancelled', {
+            chatId: task.chatId,
+          });
           return;
         }
 
@@ -193,12 +237,12 @@ export class QueueManager {
           ].join('\n'),
           createReviewKeyboard()
         );
-      } 
-      
-      else if (task.taskType === 'PUBLISH') {
+      } else if (task.taskType === 'PUBLISH') {
         const draft = await sessionManager.get(task.chatId);
         if (!draft) {
-          logger.warn('PUBLISH skipped: draft session not found or cancelled', { chatId: task.chatId });
+          logger.warn('PUBLISH skipped: draft session not found or cancelled', {
+            chatId: task.chatId,
+          });
           return;
         }
 
@@ -233,7 +277,7 @@ export class QueueManager {
         const publishedThemeId = draft.stage1?.id;
         let remainingThemes = [];
         if (draft.stage1Multi?.themes) {
-          remainingThemes = draft.stage1Multi.themes.filter(t => t.id !== publishedThemeId);
+          remainingThemes = draft.stage1Multi.themes.filter((t) => t.id !== publishedThemeId);
         }
 
         const escapedTitle = escapeMarkdown(draft.editorial.article.title);
@@ -264,13 +308,13 @@ export class QueueManager {
             angle: null,
             source: {
               ...draft.source,
-              featuredImage: null
+              featuredImage: null,
             },
             stage1Multi: {
-              themes: remainingThemes
-            }
+              themes: remainingThemes,
+            },
           });
-          
+
           await sessionManager.save(updatedMultiDraft);
 
           await telegramApi.sendMessage(
@@ -279,7 +323,7 @@ export class QueueManager {
               publishReportText,
               `🎉 *Satu tema berhasil diterbitkan!* Masih ada *${remainingThemes.length} tema berita* lainnya dari podcast ini.`,
               '',
-              'Silakan pilih tema selanjutnya untuk diproses, atau klik *🏁 Selesai & Tutup* jika sudah selesai.'
+              'Silakan pilih tema selanjutnya untuk diproses, atau klik *🏁 Selesai & Tutup* jika sudah selesai.',
             ].join('\n'),
             createThemeSelectionKeyboard(remainingThemes)
           );
@@ -297,26 +341,48 @@ export class QueueManager {
           try {
             await telegramApi.sendMessage(config.telegram.groupChatId, publishReportText);
           } catch (groupError) {
-            logger.error('Failed to send publish success report to Coordination Group', { error: groupError.message });
+            logger.error('Failed to send publish success report to Coordination Group', {
+              error: groupError.message,
+            });
           }
         }
       }
     } catch (error) {
       logger.error('Error executing task in queue', { task, error: error.message });
-      
-      // Beritahu pengguna yang bersangkutan tentang kegagalan proses
+
+      // SAFE-FALLBACK: Amankan data naskah mentah asli ke KV, kembalikan status ke IDLE
+      try {
+        const activeDraft = await sessionManager.get(task.chatId);
+        if (activeDraft) {
+          const revertedDraft = activeDraft.copyWith({
+            state: WORKFLOW_STATE.IDLE,
+          });
+          await sessionManager.save(revertedDraft);
+        }
+      } catch (recoveryError) {
+        logger.error('Failed to safely revert draft state on recovery attempt', {
+          error: recoveryError.message,
+        });
+      }
+
+      // Beritahu pengguna tentang kegagalan proses
       await telegramApi.sendMessage(
         task.chatId,
-        `❌ *Gagal memproses giliran Anda:* ${error.message}\n\nSesi Anda dibatalkan otomatis.`
+        [
+          '❌ *BATAS WAKTU SISTEM AI TERLAMPAUI*',
+          '━━━━━━━━━━━━━━━━━━━━━━━━',
+          `Gagal memproses giliran Anda karena server AI sedang sibuk:`,
+          `_${escapeMarkdown(error.message)}_`,
+          '',
+          '🛡️ *Naskah Anda Tetap Aman!* Sistem berhasil memulihkan draf mentah Anda.',
+          'Anda tidak perlu mengirim ulang naskah. Silakan coba klik tombol *🏁 Mulai* atau kirim pesan apa saja beberapa saat lagi untuk memicu ulang proses.',
+          '━━━━━━━━━━━━━━━━━━━━━━━━',
+        ].join('\n'),
+        createMainKeyboard()
       );
-      try {
-        await sessionManager.cancel(task.chatId);
-      } catch (_e) {
-        /* ignored */
-      }
     } finally {
       // =========================================================================
-      // 🚀 PENANGANAN PELEPASAN KUNCI & TRANSTRANSFER ANTREAN BERIKUTNYA
+      // PENANGANAN PELEPASAN KUNCI & TRANSTRANSFER ANTREAN BERIKUTNYA
       // =========================================================================
       const kv = container.resolve(TOKENS.DRAFT_REPOSITORY).storage.namespace;
       let queue = await kv.get(QUEUE_KEY, { type: 'json' });
@@ -324,11 +390,11 @@ export class QueueManager {
       if (queue) {
         if (queue.items.length > 0) {
           const nextTask = queue.items.shift();
-          
+
           // Set tugas berikutnya sebagai aktif
-          queue.active = { 
-            ...nextTask, 
-            startedAt: Date.now() 
+          queue.active = {
+            ...nextTask,
+            startedAt: Date.now(),
           };
           await kv.put(QUEUE_KEY, JSON.stringify(queue));
 

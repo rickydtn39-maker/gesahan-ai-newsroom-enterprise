@@ -24,11 +24,22 @@ export class SeoIndexMonitor {
 
     // Ekstraksi Metadata Resilien menggunakan Regular Expressions
     const title = this.extractRegex(html, /<title[^>]*>([\s\S]*?)<\/title>/i);
-    const canonical = this.extractRegex(html, /<link[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["'][^>]*>/i) || 
-                      this.extractRegex(html, /<link[^>]*href=["']([^"']+)["'][^>]*rel=["']canonical["'][^>]*>/i);
-    const metaDesc = this.extractRegex(html, /<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i) ||
-                      this.extractRegex(html, /<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["'][^>]*>/i);
-    const robots = this.extractRegex(html, /<meta[^>]*name=["']robots["'][^>]*content=["']([^"']+)["'][^>]*>/i);
+    const canonical =
+      this.extractRegex(html, /<link[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["'][^>]*>/i) ||
+      this.extractRegex(html, /<link[^>]*href=["']([^"']+)["'][^>]*rel=["']canonical["'][^>]*>/i);
+    const metaDesc =
+      this.extractRegex(
+        html,
+        /<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i
+      ) ||
+      this.extractRegex(
+        html,
+        /<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["'][^>]*>/i
+      );
+    const robots = this.extractRegex(
+      html,
+      /<meta[^>]*name=["']robots["'][^>]*content=["']([^"']+)["'][^>]*>/i
+    );
 
     // OpenGraph & Twitter Cards
     const ogTags = this.extractMetaProperties(html, 'og:');
@@ -36,14 +47,27 @@ export class SeoIndexMonitor {
 
     // JSON-LD Structured Data
     const schemas = this.extractJsonLd(html);
-    const hasNewsArticle = schemas.some(s => s['@type'] === 'NewsArticle' || s['@type'] === 'Article' || (Array.isArray(s['@graph']) && s['@graph'].some(g => g['@type'] === 'NewsArticle' || g['@type'] === 'Article')));
-    const hasBreadcrumb = schemas.some(s => s['@type'] === 'BreadcrumbList' || (Array.isArray(s['@graph']) && s['@graph'].some(g => g['@type'] === 'BreadcrumbList')));
+    const hasNewsArticle = schemas.some(
+      (s) =>
+        s['@type'] === 'NewsArticle' ||
+        s['@type'] === 'Article' ||
+        (Array.isArray(s['@graph']) &&
+          s['@graph'].some((g) => g['@type'] === 'NewsArticle' || g['@type'] === 'Article'))
+    );
+    const hasBreadcrumb = schemas.some(
+      (s) =>
+        s['@type'] === 'BreadcrumbList' ||
+        (Array.isArray(s['@graph']) && s['@graph'].some((g) => g['@type'] === 'BreadcrumbList'))
+    );
 
     // Isolasi Konten Artikel Utama (Mengabaikan header, sidebar, footer)
     const mainContentHtml = this.extractMainContent(html);
 
     // Konten Analisis
-    const cleanText = mainContentHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const cleanText = mainContentHtml
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
     const wordCount = cleanText.split(/\s+/).filter(Boolean).length;
     const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
@@ -55,7 +79,9 @@ export class SeoIndexMonitor {
     // Sitemap Presence Validation
     const sitemapPresent = await this.verifySitemapPresence(articleUrl);
 
-    this.logger.info('SEO micro-audit self-crawl completed', { durationMs: Date.now() - startTime });
+    this.logger.info('SEO micro-audit self-crawl completed', {
+      durationMs: Date.now() - startTime,
+    });
 
     return {
       httpStatus,
@@ -85,13 +111,13 @@ export class SeoIndexMonitor {
     for (let i = 1; i <= maxRetries; i++) {
       try {
         const res = await fetch(url, {
-          headers: { 'User-Agent': 'GesahanSeoBot/1.0 (Enterprise SEO Auditor)' }
+          headers: { 'User-Agent': 'GesahanSeoBot/1.0 (Enterprise SEO Auditor)' },
         });
         if (res.ok || res.status < 500) return res;
         throw new Error(`HTTP ${res.status}`);
       } catch (error) {
         if (i === maxRetries) throw error;
-        await new Promise(r => setTimeout(r, delay));
+        await new Promise((r) => setTimeout(r, delay));
         delay *= 2;
       }
     }
@@ -105,7 +131,7 @@ export class SeoIndexMonitor {
   extractMainContent(html) {
     const patterns = [
       /<article[^>]*>([\s\S]*?)<\/article>/i,
-      /<div[^>]*class=["']?[^"']*(entry-content|post-content|wp-block-post-content)[^"']*["']?[^>]*>([\s\S]*?)<\/div\s*>/i
+      /<div[^>]*class=["']?[^"']*(entry-content|post-content|wp-block-post-content)[^"']*["']?[^>]*>([\s\S]*?)<\/div\s*>/i,
     ];
 
     for (const pattern of patterns) {
@@ -185,15 +211,15 @@ export class SeoIndexMonitor {
 
       // 🚀 PENYEMPURNAAN FILTER: Abaikan avatar, ikon, dan gambar spacer transparan (base64 data & gif pixel)
       if (
-        attrs.includes('avatar') || 
-        attrs.includes('gravatar') || 
-        attrs.includes('share') || 
-        attrs.includes('social') || 
-        attrs.includes('icon') || 
+        attrs.includes('avatar') ||
+        attrs.includes('gravatar') ||
+        attrs.includes('share') ||
+        attrs.includes('social') ||
+        attrs.includes('icon') ||
         attrs.includes('logo') ||
         attrs.includes('data:image') || // Filter out lazy-load base64 SVGs
-        attrs.includes('spacer') ||     // Filter out spacer images
-        attrs.includes('.gif') ||       // Filter out tracking/blank pixels
+        attrs.includes('spacer') || // Filter out spacer images
+        attrs.includes('.gif') || // Filter out tracking/blank pixels
         attrs.includes('attachment-thumbnail')
       ) {
         continue; // Lewati gambar non-konten
@@ -213,12 +239,12 @@ export class SeoIndexMonitor {
 
   async verifySitemapPresence(articleUrl) {
     if (!this.sitemapUrl) return false;
-    
+
     try {
       const sitemapTarget = this.sitemapUrl.replace('sitemap_index.xml', 'post-sitemap.xml');
       const response = await fetch(sitemapTarget);
       if (!response.ok) return false;
-      
+
       const xml = await response.text();
       return xml.includes(articleUrl);
     } catch (_e) {

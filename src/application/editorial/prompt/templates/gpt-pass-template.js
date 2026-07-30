@@ -3,7 +3,14 @@
 import { JOURNALISM_RULES } from '../rules/journalism-rules.js';
 import { AI_BYPASS_RULES } from '../rules/ai-bypass-rules.js';
 
-export function getGptPassTemplate(angleInstruction, guide, geminiResultJson, rawSourceText, reporterContext, promptConfig) {
+export function getGptPassTemplate(
+  angleInstruction,
+  guide,
+  geminiResultJson,
+  rawSourceText,
+  reporterContext,
+  promptConfig
+) {
   const datelineRule = promptConfig.datelineRule;
 
   return `
@@ -27,20 +34,20 @@ ${angleInstruction}
 ================================================
 
 ### GAYA BAHASA YANG DIWAJIBKAN:
-${promptConfig.writingTone.map(tone => `- ${tone}`).join('\n')}
+${promptConfig.writingTone.map((tone) => `- ${tone}`).join('\n')}
 
 ================================================
 
 ### ATURAN ETIS & JURNALISTIK UTAMA:
-${JOURNALISM_RULES.coreEthics.map(rule => `- ${rule}`).join('\n')}
-${JOURNALISM_RULES.invertedPyramid.map(rule => `- ${rule}`).join('\n')}
-${JOURNALISM_RULES.quoteHandling.map(rule => `- ${rule}`).join('\n')}
+${JOURNALISM_RULES.coreEthics.map((rule) => `- ${rule}`).join('\n')}
+${JOURNALISM_RULES.invertedPyramid.map((rule) => `- ${rule}`).join('\n')}
+${JOURNALISM_RULES.quoteHandling.map((rule) => `- ${rule}`).join('\n')}
 
 ================================================
 
 ### ATURAN PENGHINDARAN GENERATIVE-AI CLICHE:
-${AI_BYPASS_RULES.bannedCliches.map(rule => `- ${rule}`).join('\n')}
-${AI_BYPASS_RULES.flowOptimizations.map(rule => `- ${rule}`).join('\n')}
+${AI_BYPASS_RULES.bannedCliches.map((rule) => `- ${rule}`).join('\n')}
+${AI_BYPASS_RULES.flowOptimizations.map((rule) => `- ${rule}`).join('\n')}
 
 ================================================
 

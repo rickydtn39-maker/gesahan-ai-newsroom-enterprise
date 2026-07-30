@@ -1,3 +1,5 @@
+// FILE: src/app/handlers/telegram-webhook-handler.js
+
 import { CONTENT_TYPE, HTTP_STATUS } from '../../core/constants/index.js';
 import { TOKENS } from '../../core/container/tokens.js';
 
@@ -30,29 +32,40 @@ export async function telegramWebhookHandler(request, context) {
   const telegramApi = context.container.resolve(TOKENS.TELEGRAM_API);
   const sessionManager = context.container.resolve(TOKENS.SESSION_MANAGER);
 
-  // 🚀 DETEKSI DOMAIN AKTIF DARI REQUEST MASUK UNTUK ASSEMBLYAI WEBHOOK
+  // DETEKSI DOMAIN AKTIF DARI REQUEST MASUK UNTUK ASSEMBLYAI WEBHOOK
   const origin = new URL(request.url).origin;
 
-  logger.info('Incoming Telegram Webhook', {
+  logger.info('Incoming Telegram Webhook Received', {
     updateId: update.updateId,
     chatId: update.chatId,
     userId: update.userId,
-    hasText: update.hasText,
-    hasPhoto: update.hasPhoto,
-    hasDocument: update.hasDocument,
     origin,
   });
 
   metrics.increment('webhook_received', 1, { source: 'telegram' });
 
-  await dispatchTelegramUpdate(update, {
+  // 🚀 HIGH-PERFORMANCE ASYNC DECOUPLING:
+  // Jalankan seluruh logika dispatcher di latar belakang agar webhook merespons < 100ms.
+  // Ini mencegah Telegram melakukan pengiriman ulang pesan duplikat yang membakar kuota AI!
+  const dispatchPromise = dispatchTelegramUpdate(update, {
     telegramApi,
     sessionManager,
     container: context.container,
-    origin, // 🚀 Wariskan domain dinamis secara rapi
+    origin,
+  }).catch((err) => {
+    logger.error('Background dispatch task experienced an unhandled error', {
+      error: err.message,
+      stack: err.stack,
+    });
   });
 
-  return new Response(JSON.stringify({ ok: true }, null, 2), {
+  if (context.ctx && typeof context.ctx.waitUntil === 'function') {
+    context.ctx.waitUntil(dispatchPromise);
+  } else {
+    logger.warn('Cloudflare ctx background execution shield is missing (local test mode)');
+  }
+
+  return new Response(JSON.stringify({ ok: true, status: 'ACCEPTED_NON_BLOCKING' }), {
     status: HTTP_STATUS.OK,
     headers: { 'content-type': CONTENT_TYPE.JSON },
   });

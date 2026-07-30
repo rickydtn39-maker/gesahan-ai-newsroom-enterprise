@@ -9,13 +9,15 @@ import { fetchYoutubeTranscript } from '../../../infrastructure/providers/youtub
 import { getYoutubePassTemplate } from '../../editorial/prompt/templates/youtube-pass-template.js';
 import { WORDPRESS_CATEGORY_MAP } from '../../../infrastructure/providers/wordpress/category-map.js';
 import { QueueManager } from '../../../infrastructure/queue/queue-manager.js';
+import { escapeMarkdown } from '../../../core/utils/markdown.js';
 
-function escapeMarkdown(text) {
-  if (!text) return '';
-  return text.toString().replace(/[_*`[\]]/g, '\\$&');
-}
-
-export async function articleCommand(update, telegramApi, sessionManager, container, origin = null) {
+export async function articleCommand(
+  update,
+  telegramApi,
+  sessionManager,
+  container,
+  origin = null
+) {
   let state = await sessionManager.getState(update.chatId);
 
   if (state === WORKFLOW_STATE.IDLE) {
@@ -45,16 +47,18 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
 
     try {
       const env = container.has('env') ? container.resolve('env') : {};
-      
+
       // Ambil domain origin dinamis dari parameter pemanggilan
-      const activeOrigin = origin || (container.has('request') ? new URL(container.resolve('request').url).origin : null);
+      const activeOrigin =
+        origin ||
+        (container.has('request') ? new URL(container.resolve('request').url).origin : null);
 
       // Panggil sistem transkripsi cerdas asinkron/sinkron
       const transcriptResult = await fetchYoutubeTranscript(
-        incomingText, 
-        env, 
-        update.chatId, 
-        update.userId, 
+        incomingText,
+        env,
+        update.chatId,
+        update.userId,
         activeOrigin
       );
 
@@ -66,8 +70,8 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
           source: {
             ...draft.source,
             type: 'text',
-            text: `[Menunggu Transkrip AssemblyAI Job ID: ${transcriptResult.transcriptId}]`
-          }
+            text: `[Menunggu Transkrip AssemblyAI Job ID: ${transcriptResult.transcriptId}]`,
+          },
         });
         await sessionManager.save(updatedDraft);
 
@@ -83,7 +87,7 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
       const geminiPrompt = getYoutubePassTemplate(allowedCategories, transcriptResult);
 
       const aiProvider = container.resolve(TOKENS.AI_PROVIDER);
-      
+
       const youtubeResponseSchema = {
         type: 'object',
         required: ['themes'],
@@ -92,7 +96,17 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
             type: 'array',
             items: {
               type: 'object',
-              required: ['id', 'themeTitle', 'extractedInfo', 'seo', 'wordpress', 'newsValue', 'priority', 'confidence', 'draftReporter'],
+              required: [
+                'id',
+                'themeTitle',
+                'extractedInfo',
+                'seo',
+                'wordpress',
+                'newsValue',
+                'priority',
+                'confidence',
+                'draftReporter',
+              ],
               properties: {
                 id: { type: 'number' },
                 themeTitle: { type: 'string' },
@@ -108,7 +122,15 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
                     how: { type: 'string' },
                     details: {
                       type: 'object',
-                      required: ['pangkat', 'jabatan', 'instansi', 'barangBukti', 'nomorPerkara', 'lokasi', 'kutipan'],
+                      required: [
+                        'pangkat',
+                        'jabatan',
+                        'instansi',
+                        'barangBukti',
+                        'nomorPerkara',
+                        'lokasi',
+                        'kutipan',
+                      ],
                       properties: {
                         pangkat: { type: 'string' },
                         jabatan: { type: 'string' },
@@ -116,10 +138,10 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
                         barangBukti: { type: 'string' },
                         nomorPerkara: { type: 'string' },
                         lokasi: { type: 'string' },
-                        kutipan: { type: 'string' }
-                      }
-                    }
-                  }
+                        kutipan: { type: 'string' },
+                      },
+                    },
+                  },
                 },
                 seo: {
                   type: 'object',
@@ -127,34 +149,41 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
                   properties: {
                     focusKeyword: { type: 'string' },
                     secondaryKeywords: { type: 'array', items: { type: 'string' } },
-                    metaDescription: { type: 'string' }
-                  }
+                    metaDescription: { type: 'string' },
+                  },
                 },
                 wordpress: {
                   type: 'object',
                   required: ['category', 'tags'],
                   properties: {
                     category: { type: 'string' },
-                    tags: { type: 'array', items: { type: 'string' } }
-                  }
+                    tags: { type: 'array', items: { type: 'string' } },
+                  },
                 },
                 newsValue: {
                   type: 'object',
-                  required: ['impact', 'conflict', 'humanInterest', 'novelty', 'publicInterest', 'score'],
+                  required: [
+                    'impact',
+                    'conflict',
+                    'humanInterest',
+                    'novelty',
+                    'publicInterest',
+                    'score',
+                  ],
                   properties: {
                     impact: { type: 'number' },
                     conflict: { type: 'number' },
                     humanInterest: { type: 'number' },
                     novelty: { type: 'number' },
                     publicInterest: { type: 'number' },
-                    score: { type: 'number' }
-                  }
+                    score: { type: 'number' },
+                  },
                 },
                 priority: { type: 'string' },
                 confidence: {
                   type: 'object',
                   required: ['ocrAccuracy'],
-                  properties: { ocrAccuracy: { type: 'number' } }
+                  properties: { ocrAccuracy: { type: 'number' } },
                 },
                 draftReporter: {
                   type: 'object',
@@ -162,18 +191,18 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
                   properties: {
                     title: { type: 'string' },
                     lead: { type: 'string' },
-                    content: { type: 'string' }
-                  }
-                }
-              }
-            }
-          }
-        }
+                    content: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
       };
 
       const result = await aiProvider.generate({
         prompt: geminiPrompt,
-        schema: youtubeResponseSchema
+        schema: youtubeResponseSchema,
       });
 
       if (!result.themes || result.themes.length === 0) {
@@ -188,7 +217,7 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
           ...draft.source,
           type: 'text',
           text: `[YouTube Video Transcript: ${incomingText}]`,
-        }
+        },
       });
 
       await sessionManager.save(updatedMultiDraft);
@@ -204,13 +233,12 @@ export async function articleCommand(update, telegramApi, sessionManager, contai
         ].join('\n'),
         createThemeSelectionKeyboard(result.themes)
       );
-
     } catch (error) {
       await sessionManager.cancel(update.chatId);
-      
+
       // 🚀 DOUBLE-SAFETY: Saring karakter liar Markdown dari error message sebelum dikirim ke bot
       const escapedError = escapeMarkdown(error.message);
-      
+
       return telegramApi.sendMessage(
         update.chatId,
         `❌ *Gagal memproses tautan YouTube:*\n\n${escapedError}\n\nSesi dibatalkan.`,

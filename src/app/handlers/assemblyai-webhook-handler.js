@@ -50,11 +50,15 @@ export async function assemblyAiWebhookHandler(request, context) {
       );
 
       // Unduh transkrip teks lengkap dari AssemblyAI menggunakan kredensial dari config
-      const transcriptResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${payload.transcript_id}`, {
-        headers: {
-          'authorization': context.configuration.openai.apiKey || context.configuration.gemini.apiKey // Amankan fallback key
+      const transcriptResponse = await fetch(
+        `https://api.assemblyai.com/v2/transcript/${payload.transcript_id}`,
+        {
+          headers: {
+            authorization:
+              context.configuration.openai.apiKey || context.configuration.gemini.apiKey, // Amankan fallback key
+          },
         }
-      });
+      );
 
       if (!transcriptResponse.ok) {
         throw new Error('Gagal mengunduh teks transkrip dari AssemblyAI CDN.');
@@ -74,11 +78,14 @@ export async function assemblyAiWebhookHandler(request, context) {
           ...draft.source,
           type: 'text',
           text: extractedText,
-        }
+        },
       });
       await sessionManager.save(updatedDraft);
 
-      await telegramApi.sendMessage(chatId, '⏳ *[STAGE 1] Memulai analisis data dan pembagian tema...*');
+      await telegramApi.sendMessage(
+        chatId,
+        '⏳ *[STAGE 1] Memulai analisis data dan pembagian tema...*'
+      );
 
       // Masukkan ke dalam antrean (Queue) untuk diproses AI secara aman tanpa tabrakan
       await QueueManager.add(chatId, userId, 'STAGE_1_INGEST', {}, context.container);
@@ -88,7 +95,6 @@ export async function assemblyAiWebhookHandler(request, context) {
       status: HTTP_STATUS.OK,
       headers: { 'content-type': CONTENT_TYPE.JSON },
     });
-
   } catch (error) {
     logger.error('Error handling AssemblyAI Webhook', { error: error.message });
     await telegramApi.sendMessage(chatId, `❌ *Sistem Webhook Error:* ${error.message}`);

@@ -3,11 +3,13 @@
 export class InnerTubeClient {
   static async fetchPlayerResponse(videoId, env, logger) {
     const customProxy = env.CUSTOM_PROXY_URL || null;
-    
+
     // 🚀 STRICT CONFIGURATION: Hanya aktif jika YOUTUBE_INNERTUBE_API_KEY dikonfigurasi di environment
     const innertubeKey = env.YOUTUBE_INNERTUBE_API_KEY;
     if (!innertubeKey) {
-      logger.warn('[InnerTube Client] YOUTUBE_INNERTUBE_API_KEY is not configured. Direct InnerTube route disabled.');
+      logger.warn(
+        '[InnerTube Client] YOUTUBE_INNERTUBE_API_KEY is not configured. Direct InnerTube route disabled.'
+      );
       throw new Error('YOUTUBE_INNERTUBE_API_KEY is missing in wrangler.jsonc config.');
     }
 
@@ -25,10 +27,10 @@ export class InnerTubeClient {
               clientVersion: env.YOUTUBE_CLIENT_VERSION_ANDROID || '19.05.36',
               androidSdkVersion: 31,
               hl: 'id',
-              gl: 'ID'
-            }
-          }
-        }
+              gl: 'ID',
+            },
+          },
+        },
       },
       {
         name: 'IOS Mobile App Client',
@@ -40,10 +42,10 @@ export class InnerTubeClient {
               clientVersion: env.YOUTUBE_CLIENT_VERSION_IOS || '19.02.2',
               deviceModel: 'iPhone16,2',
               hl: 'id',
-              gl: 'ID'
-            }
-          }
-        }
+              gl: 'ID',
+            },
+          },
+        },
       },
       {
         name: 'WEB Desktop Player Client',
@@ -54,11 +56,11 @@ export class InnerTubeClient {
               clientName: 'WEB',
               clientVersion: env.YOUTUBE_CLIENT_VERSION_WEB || '2.20240210.01.00',
               hl: 'id',
-              gl: 'ID'
-            }
-          }
-        }
-      }
+              gl: 'ID',
+            },
+          },
+        },
+      },
     ];
 
     let lastError = null;
@@ -71,7 +73,7 @@ export class InnerTubeClient {
         }
 
         logger.info(`[InnerTube Client] Menghubungi InnerTube API via ${client.name}...`);
-        
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
 
@@ -79,10 +81,11 @@ export class InnerTubeClient {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
           },
           body: JSON.stringify(client.payload),
-          signal: controller.signal
+          signal: controller.signal,
         }).finally(() => clearTimeout(timeoutId));
 
         if (!response.ok) {
@@ -98,11 +101,13 @@ export class InnerTubeClient {
           hasCaptions: Boolean(data?.captions),
           hasVideoDetails: Boolean(data?.videoDetails),
           hasStreamingData: Boolean(data?.streamingData),
-          hasMicroformat: Boolean(data?.microformat)
+          hasMicroformat: Boolean(data?.microformat),
         });
 
         if (data?.playabilityStatus?.status === 'UNPLAYABLE') {
-          throw new Error(`Video is unplayable: ${data?.playabilityStatus?.reason || 'No reason provided'}`);
+          throw new Error(
+            `Video is unplayable: ${data?.playabilityStatus?.reason || 'No reason provided'}`
+          );
         }
 
         return data;

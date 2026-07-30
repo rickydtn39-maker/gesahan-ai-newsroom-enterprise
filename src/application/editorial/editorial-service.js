@@ -23,33 +23,42 @@ export class EditorialService {
     this.validator = new EditorialValidator();
     this.logger = logger;
     this.metrics = metrics;
-    this.whitelistRepository = whitelistRepository; // 🚀 Menyimpan whitelist repositori
+    this.whitelistRepository = whitelistRepository;
   }
 
   async getReporterContext(userId) {
     try {
       const whitelist = await this.whitelistRepository.getAll();
       const user = whitelist.find((u) => Number(u.userId) === Number(userId));
-      
-      const name = user ? user.name : `Wartawan #${userId}`;
-      const lowerName = name.toLowerCase();
 
-      let type = 'GENERAL';
-      if (lowerName.includes('pagaralam')) {
-        type = 'POLRES_PAGARALAM';
-      } else if (lowerName.includes('palembang')) {
-        type = 'POLRESTABES_PALEMBANG';
+      const name = user ? user.name : `Wartawan #${userId}`;
+
+      // 🚀 DETEKSI DETERMINISTIK: Ambil tipe profil langsung dari database KV Whitelist
+      let type = user && user.type ? user.type : 'GENERAL';
+
+      // Fallback pencarian string nama (Backwards Compatibility jika KV belum di-update)
+      if (type === 'GENERAL') {
+        const lowerName = name.toLowerCase();
+        if (lowerName.includes('pagaralam')) {
+          type = 'POLRES_PAGARALAM';
+        } else if (lowerName.includes('palembang')) {
+          type = 'POLRESTABES_PALEMBANG';
+        }
       }
+
+      this.logger.info('Resolved reporter profile context', { userId, name, type });
 
       return {
         name,
-        type
+        type,
       };
     } catch (error) {
-      this.logger.error('Failed to build reporter context, falling back to default', { error: error.message });
+      this.logger.error('Failed to build reporter context, falling back to default', {
+        error: error.message,
+      });
       return {
         name: 'Wartawan',
-        type: 'GENERAL'
+        type: 'GENERAL',
       };
     }
   }
@@ -77,7 +86,11 @@ export class EditorialService {
 
     try {
       const reporterContext = await this.getReporterContext(draft.userId);
-      const rawResult = await this.editorialEngine.processStage3(draft, stage1Result, reporterContext);
+      const rawResult = await this.editorialEngine.processStage3(
+        draft,
+        stage1Result,
+        reporterContext
+      );
       const validated = this.validator.validateEditorial(rawResult);
 
       const fullText = `${validated.lead}\n\n${validated.content}`;
@@ -92,10 +105,10 @@ export class EditorialService {
           content: validated.content,
         },
         seo: {
-          focusKeyword: stage1Result.seo.focusKeyword,
-          metaDescription: stage1Result.seo.metaDescription,
-          category: stage1Result.wordpress.category,
-          tags: stage1Result.wordpress.tags,
+          focusKeyword: stage1Result.focusKeyword || stage1Result.seo?.focusKeyword || '',
+          metaDescription: stage1Result.metaDescription || stage1Result.seo?.metaDescription || '',
+          category: stage1Result.wordpress?.category || 'BERITA',
+          tags: stage1Result.wordpress?.tags || [],
           slug,
         },
         statistics: {
@@ -103,7 +116,7 @@ export class EditorialService {
           readingTime,
         },
         quality: {
-          score: stage1Result.newsValue.score,
+          score: stage1Result.newsValue?.score || 0,
           notes: validated.qcReport.notes,
         },
       });

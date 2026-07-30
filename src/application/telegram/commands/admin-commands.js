@@ -1,3 +1,5 @@
+// FILE: src/application/telegram/commands/admin-commands.js
+
 export async function addUserCommand(update, telegramApi, whitelistRepository) {
   const text = update.text || '';
   const parts = text.split(/\s+/);
@@ -31,12 +33,17 @@ export async function addUserCommand(update, telegramApi, whitelistRepository) {
       );
     }
 
-    list.push({ userId: targetId, name, addedAt: new Date().toISOString() });
+    list.push({
+      userId: targetId,
+      name,
+      type: 'GENERAL', // Set default profil umum saat pertama kali ditambahkan
+      addedAt: new Date().toISOString(),
+    });
     await whitelistRepository.save(list);
 
     return telegramApi.sendMessage(
       update.chatId,
-      `✅ *PENGGUNA BERHASIL DITAMBAHKAN!*\n\n• *Nama:* ${name}\n• *ID:* \`${targetId}\`\n\nKini ${name} sudah bisa langsung menggunakan GESAHAN AI Newsroom.`
+      `✅ *PENGGUNA BERHASIL DITAMBAHKAN!*\n\n• *Nama:* ${name}\n• *ID:* \`${targetId}\`\n• *Profil:* GENERAL (Umum)\n\nKini ${name} sudah bisa langsung menggunakan GESAHAN AI Newsroom.`
     );
   } catch (error) {
     return telegramApi.sendMessage(
@@ -102,7 +109,8 @@ export async function listUsersCommand(update, telegramApi, whitelistRepository)
     const report = list
       .map((u, idx) => {
         const authorIndicator = u.wpUsername ? '✍️' : '👤';
-        return `${idx + 1}. *${u.name}* (\`${u.userId}\`) ${authorIndicator}`;
+        const profileIndicator = u.type ? `[${u.type}]` : '[GENERAL]';
+        return `${idx + 1}. *${u.name}* (\`${u.userId}\`) ${profileIndicator} ${authorIndicator}`;
       })
       .join('\n');
 
@@ -114,6 +122,76 @@ export async function listUsersCommand(update, telegramApi, whitelistRepository)
     return telegramApi.sendMessage(
       update.chatId,
       `❌ Gagal memanggil daftar pengguna: ${error.message}`
+    );
+  }
+}
+
+export async function setuserprofileCommand(update, telegramApi, whitelistRepository) {
+  const text = update.text || '';
+  const parts = text.split(/\s+/);
+
+  if (parts.length < 3) {
+    return telegramApi.sendMessage(
+      update.chatId,
+      [
+        '⚠️ *Format Salah!*',
+        '',
+        'Gunakan perintah:',
+        '`/setuserprofile [USER_ID] [PROFILE_TYPE]`',
+        '',
+        'Pilihan PROFILE_TYPE:',
+        '• `GENERAL` (Profil Standar)',
+        '• `POLRES_PAGARALAM` (Humas Polres Pagaralam)',
+        '• `POLRESTABES_PALEMBANG` (Humas Polrestabes Palembang)',
+        '',
+        'Contoh:',
+        '`/setuserprofile 987654321 POLRES_PAGARALAM`',
+      ].join('\n')
+    );
+  }
+
+  const targetId = Number(parts[1]);
+  const profileType = parts[2].toUpperCase();
+
+  const validTypes = ['GENERAL', 'POLRES_PAGARALAM', 'POLRESTABES_PALEMBANG'];
+  if (!validTypes.includes(profileType)) {
+    return telegramApi.sendMessage(
+      update.chatId,
+      `❌ *Tipe Profil Tidak Valid!*\n\nPilih salah satu dari: ${validTypes.map((t) => `\`${t}\``).join(', ')}`
+    );
+  }
+
+  if (isNaN(targetId)) {
+    return telegramApi.sendMessage(update.chatId, '❌ *ID Telegram Tidak Valid!*');
+  }
+
+  try {
+    const list = await whitelistRepository.getAll();
+    const userIndex = list.findIndex((u) => Number(u.userId) === targetId);
+
+    if (userIndex === -1) {
+      return telegramApi.sendMessage(
+        update.chatId,
+        `❌ ID Pengguna *${targetId}* tidak ditemukan dalam database whitelist.`
+      );
+    }
+
+    list[userIndex] = {
+      ...list[userIndex],
+      type: profileType,
+      profileUpdatedAt: new Date().toISOString(),
+    };
+
+    await whitelistRepository.save(list);
+
+    return telegramApi.sendMessage(
+      update.chatId,
+      `✅ *PROFIL AKTIF BERHASIL DIKUNCI!*\n\n• Pengguna: *${list[userIndex].name}*\n• ID: \`${targetId}\`\n• Profil Baru: *${profileType}*\n\nSistem AI sekarang akan menerapkan SOP penulisan, template pimpinan, dan dateline khusus sesuai profil ini.`
+    );
+  } catch (error) {
+    return telegramApi.sendMessage(
+      update.chatId,
+      `❌ Gagal mengubah profil pengguna: ${error.message}`
     );
   }
 }

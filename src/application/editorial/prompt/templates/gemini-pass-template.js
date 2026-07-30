@@ -2,9 +2,14 @@
 
 import { JOURNALISM_RULES } from '../rules/journalism-rules.js';
 
-export function getGeminiPassTemplate(allowedCategories, rawSourceText, reporterContext, promptConfig) {
+export function getGeminiPassTemplate(
+  allowedCategories,
+  rawSourceText,
+  reporterContext,
+  promptConfig
+) {
   const customCategoryInstruction = promptConfig.geminiCategoryRule(reporterContext.name);
-  
+
   const fallbackRule = promptConfig.fallbackCategory
     ? `* Jika wartawan adalah ${reporterContext.name} -> Pilih Kategori: **${promptConfig.fallbackCategory}**`
     : `* Pilih kategori ter-spesifik sesuai pohon keputusan di bawah ini.`;
@@ -26,7 +31,7 @@ ${customCategoryInstruction}
 ================================================
 
 ### SOP JURNALISTIK UTAMA:
-${JOURNALISM_RULES.coreEthics.map(rule => `- ${rule}`).join('\n')}
+${JOURNALISM_RULES.coreEthics.map((rule) => `- ${rule}`).join('\n')}
 
 ================================================
 

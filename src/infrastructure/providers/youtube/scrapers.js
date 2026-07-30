@@ -6,18 +6,19 @@ export class EmbedScraper {
   static async fetchEmbedCaptions(videoId, env, logger) {
     const customProxy = env.CUSTOM_PROXY_URL || null;
     let url = `https://www.youtube.com/embed/${videoId}`;
-    
+
     if (customProxy) {
       url = `${customProxy.replace(/\/+$/, '')}/${encodeURIComponent(url)}`;
     }
 
     logger.info(`[Embed Scraper] Bootstrapping HTML embed fallback: ${url}`);
-    
+
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7'
-      }
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+      },
     });
 
     if (!response.ok) {
@@ -25,13 +26,13 @@ export class EmbedScraper {
     }
 
     const html = await response.text();
-    
+
     // 🚀 RESILIENT MULTI-MARKER PARSER (SAFE DIAGNOSTIC-DRIVEN DECOUPLING)
     const markers = [
       'ytInitialPlayerResponse = ',
       'window["ytInitialPlayerResponse"] = ',
       'ytplayer.config = ',
-      'ytInitialData = '
+      'ytInitialData = ',
     ];
 
     let jsonStr = null;
@@ -54,12 +55,14 @@ export class EmbedScraper {
       // Cetak metadata diagnostik jika scraper gagal total memilah data HTML
       logger.warn('[Embed Scraper] Failed to locate any player markers in embed HTML.', {
         htmlLength: html.length,
-        pageTitle: html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim() || 'N/A'
+        pageTitle: html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim() || 'N/A',
       });
       throw new Error('Embed HTML Scraper could not extract player configuration objects.');
     }
 
-    logger.info(`[Embed Scraper] Target player object extracted successfully using marker: "${matchedMarker}"`);
+    logger.info(
+      `[Embed Scraper] Target player object extracted successfully using marker: "${matchedMarker}"`
+    );
 
     let playerResponse;
     try {
@@ -67,10 +70,12 @@ export class EmbedScraper {
     } catch (jsonErr) {
       logger.error('[Embed Scraper] Failed to parse extracted player configuration JSON string.', {
         marker: matchedMarker,
-        error: jsonErr.message
+        error: jsonErr.message,
       });
       // 🚀 FIXED: Menyertakan cause untuk mematuhi aturan preserve-caught-error
-      throw new Error(`JSON parsing failure on HTML scraper marker: ${matchedMarker}`, { cause: jsonErr });
+      throw new Error(`JSON parsing failure on HTML scraper marker: ${matchedMarker}`, {
+        cause: jsonErr,
+      });
     }
 
     // Jika marker yang ditemukan adalah ytplayer.config, ambil data playerResponse di dalamnya
@@ -78,11 +83,16 @@ export class EmbedScraper {
       try {
         playerResponse = JSON.parse(playerResponse.args.player_response);
       } catch (nestedJsonErr) {
-        logger.error('[Embed Scraper] Failed to parse nested player_response inside ytplayer.config.', {
-          error: nestedJsonErr.message
-        });
+        logger.error(
+          '[Embed Scraper] Failed to parse nested player_response inside ytplayer.config.',
+          {
+            error: nestedJsonErr.message,
+          }
+        );
         // 🚀 FIXED: Menyertakan cause untuk mematuhi aturan preserve-caught-error
-        throw new Error('Nested JSON parsing failure inside ytplayer.config wrapper.', { cause: nestedJsonErr });
+        throw new Error('Nested JSON parsing failure inside ytplayer.config wrapper.', {
+          cause: nestedJsonErr,
+        });
       }
     }
 

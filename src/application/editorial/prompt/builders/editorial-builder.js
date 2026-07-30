@@ -10,10 +10,10 @@ export class EditorialBuilder {
   buildGeminiPass(job, reporterContext) {
     const allowedCategories = Object.keys(WORDPRESS_CATEGORY_MAP).join(', ');
     const promptConfig = resolveProfile(reporterContext.type);
-    
+
     // Keamanan Tingkat Enterprise: Validasi struktur data profile sebelum eksekusi AI
     PromptValidator.validateProfile(promptConfig);
-    
+
     return getGeminiPassTemplate(allowedCategories, job.source.text, reporterContext, promptConfig);
   }
 
@@ -27,6 +27,13 @@ export class EditorialBuilder {
     const angleInstruction = promptConfig.gptAngleInstruction(job);
     const geminiResultJson = JSON.stringify(geminiResult, null, 2);
 
-    return getGptPassTemplate(angleInstruction, guide, geminiResultJson, job.source.text, reporterContext, promptConfig);
+    return getGptPassTemplate(
+      angleInstruction,
+      guide,
+      geminiResultJson,
+      job.source.text,
+      reporterContext,
+      promptConfig
+    );
   }
 }

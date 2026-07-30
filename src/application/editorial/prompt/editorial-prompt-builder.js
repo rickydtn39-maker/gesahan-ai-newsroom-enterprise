@@ -11,7 +11,11 @@ export class EditorialPromptBuilder {
     return this.editorialBuilder.buildGeminiPass(job, reporterContext);
   }
 
-  buildChatGptPass(job, geminiResult, reporterContext = { name: 'Wartawan', isPolresPagaralam: false }) {
+  buildChatGptPass(
+    job,
+    geminiResult,
+    reporterContext = { name: 'Wartawan', isPolresPagaralam: false }
+  ) {
     return this.editorialBuilder.buildChatGptPass(job, geminiResult, reporterContext);
   }
 }

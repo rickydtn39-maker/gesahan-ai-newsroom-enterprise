@@ -4,7 +4,8 @@ import { MESSAGES } from '../../../core/constants/messages.js';
 import { createStartKeyboard } from '../keyboards/index.js';
 
 export async function cancelCommand(update, telegramApi, sessionManager) {
-  const chatId = update.chatId || update.message?.chat?.id || update.callback_query?.message?.chat?.id;
+  const chatId =
+    update.chatId || update.message?.chat?.id || update.callback_query?.message?.chat?.id;
 
   try {
     // Menghapus draf dan memulihkan state sesi secara menyeluruh

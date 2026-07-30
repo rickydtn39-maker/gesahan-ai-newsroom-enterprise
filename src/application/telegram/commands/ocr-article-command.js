@@ -1,11 +1,9 @@
 // FILE: src/application/telegram/commands/ocr-article-command.js
 
 import { WORKFLOW_STATE } from '../../../core/constants/index.js';
-import { TOKENS } from '../../../core/container/tokens.js';
 import { MESSAGES } from '../../../core/constants/messages.js';
 import { createDraft } from '../../services/editorial-session.js';
-import { attachSourceText } from '../../services/draft-service.js';
-import { QueueManager } from '../../../infrastructure/queue/queue-manager.js'; // 🚀 Impor Queue Manager
+import { QueueManager } from '../../../infrastructure/queue/queue-manager.js';
 
 export async function ocrArticleCommand(update, telegramApi, sessionManager, container) {
   let state = await sessionManager.getState(update.chatId);
@@ -24,32 +22,32 @@ export async function ocrArticleCommand(update, telegramApi, sessionManager, con
     return telegramApi.sendMessage(update.chatId, MESSAGES.OCR.INPUT_INVALID);
   }
 
-  await telegramApi.sendMessage(
-    update.chatId,
-    '🔍 *Memindai gambar/dokumen (OCR)...* Mohon tunggu sebentar.'
-  );
-
   try {
-    const downloadedFile = await telegramApi.downloadFile(fileId);
-    const ocrProvider = container.resolve(TOKENS.OCR_PROVIDER);
-    const extractedText = await ocrProvider.extractText(
-      downloadedFile.buffer,
-      downloadedFile.mimeType
-    );
-
     const draft = await sessionManager.get(update.chatId);
-    const draftWithSource = attachSourceText(draft, extractedText);
 
-    // Amankan status draf ke pemrosesan editorial
-    const lockedDraft = draftWithSource.copyWith({
+    // Kunci status sesi draf ke pemrosesan editorial
+    const lockedDraft = draft.copyWith({
       state: WORKFLOW_STATE.EDITORIAL_PROCESSING,
+      source: {
+        ...draft.source,
+        type: 'photo',
+      },
     });
     await sessionManager.save(lockedDraft);
 
-    await telegramApi.sendMessage(update.chatId, MESSAGES.WORKFLOW.STAGE1_LOADING);
+    await telegramApi.sendMessage(
+      update.chatId,
+      '⏳ *Naskah Anda Masuk Antrean Cloud!* Sistem sedang menjadwalkan giliran OCR & klasifikasi data berita Anda...'
+    );
 
-    // 🚀 MASUKKAN PROSES ANALISIS GEMINI SELESAI OCR KE QUEUE MANAGER (ANTREAN)
-    await QueueManager.add(update.chatId, update.userId, 'STAGE_1_INGEST', {}, container);
+    // 🚀 MASUKKAN KE ANTREAN: Lewatkan fileId ke payload untuk diproses serial di Queue Manager
+    await QueueManager.add(
+      update.chatId,
+      update.userId,
+      'STAGE_1_INGEST',
+      { ocrFileId: fileId },
+      container
+    );
   } catch (error) {
     await sessionManager.cancel(update.chatId);
     return telegramApi.sendMessage(

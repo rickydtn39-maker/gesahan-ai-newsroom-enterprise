@@ -1,44 +1,10 @@
+// FILE: src/infrastructure/providers/seo/seo-provider.js
+
 export class SeoProvider {
   constructor(configuration, logger) {
     this.sitemapUrl = configuration.seo.sitemapUrl;
     this.rssUrl = configuration.seo.rssUrl;
-    this.indexNowKey = configuration.seo.indexNowKey;
     this.logger = logger;
-  }
-
-  async submitToIndexNow(articleUrl) {
-    if (!this.indexNowKey || !this.sitemapUrl) {
-      this.logger.warn('IndexNow submission skipped: key or host is not configured.');
-      return;
-    }
-
-    try {
-      const host = new URL(this.sitemapUrl).hostname;
-      const url = 'https://api.indexnow.org/indexnow';
-
-      const payload = {
-        host: host,
-        key: this.indexNowKey,
-        keyLocation: `https://${host}/${this.indexNowKey}.txt`,
-        urlList: [articleUrl],
-      };
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      this.logger.info('IndexNow submission successful', { articleUrl });
-    } catch (error) {
-      this.logger.error('IndexNow submission failed', { error: error.message });
-    }
   }
 
   async pingSitemap() {

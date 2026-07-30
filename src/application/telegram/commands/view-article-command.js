@@ -1,11 +1,7 @@
 // FILE: src/application/telegram/commands/view-article-command.js
 
 import { MESSAGES } from '../../../core/constants/messages.js';
-
-function escapeMarkdown(text) {
-  if (!text) return '';
-  return text.toString().replace(/[_*`[\]]/g, '\\$&');
-}
+import { escapeMarkdown } from '../../../core/utils/markdown.js';
 
 export async function viewArticleCommand(update, telegramApi, sessionManager) {
   const draft = await sessionManager.get(update.chatId);

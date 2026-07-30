@@ -22,7 +22,12 @@ import { angleSaveCommand } from './commands/angle-save-command.js';
 import { setAuthorCommand } from './commands/setauthor-command.js';
 import { themeSelectionCommand } from './commands/theme-selection-command.js';
 
-import { addUserCommand, delUserCommand, listUsersCommand } from './commands/admin-commands.js';
+import {
+  addUserCommand,
+  delUserCommand,
+  listUsersCommand,
+  setuserprofileCommand,
+} from './commands/admin-commands.js';
 import { createMainKeyboard } from './keyboards/index.js';
 
 class CommandRegistry {
@@ -59,7 +64,8 @@ const registry = new CommandRegistry()
   .registerStatic('❌ Batal', cancelCommand)
   .registerAdmin('/adduser', addUserCommand)
   .registerAdmin('/deluser', delUserCommand)
-  .registerAdmin('/listusers', listUsersCommand);
+  .registerAdmin('/listusers', listUsersCommand)
+  .registerAdmin('/setuserprofile', setuserprofileCommand); // 🚀 Daftarkan rute perintah admin baru
 
 export async function dispatchTelegramUpdate(update, services) {
   const logger = services.container.resolve(TOKENS.LOGGER);

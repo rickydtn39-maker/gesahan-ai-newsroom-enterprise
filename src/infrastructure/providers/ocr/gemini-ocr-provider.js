@@ -1,3 +1,5 @@
+// FILE: src/infrastructure/providers/ocr/gemini-ocr-provider.js
+
 export class GeminiOcrProvider {
   constructor(apiKey, model) {
     this.apiKey = apiKey;
@@ -39,20 +41,65 @@ export class GeminiOcrProvider {
       },
     };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    const maxRetries = 5;
+    let delay = 2000;
+    let response;
+    let payload;
 
-    const payload = await response.json();
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        });
 
-    if (!response.ok) {
-      throw new Error(
-        `Gemini OCR (${response.status}): ${payload?.error?.message || 'Unknown error'}`
-      );
+        payload = await response.json();
+
+        if (response.ok) {
+          break; // Sukses, keluar dari loop
+        }
+
+        const status = response.status;
+
+        if (status === 429 || status >= 500) {
+          if (attempt === maxRetries) {
+            throw new Error(
+              `Gemini OCR (${status}): ${payload?.error?.message || 'Exceeded max retry limits during OCR'}`
+            );
+          }
+
+          const jitter = Math.random() * 1000;
+          const sleepTime = delay + jitter;
+
+          console.warn(
+            `[Gemini OCR Shield] Received HTTP ${status}. Retrying attempt ${attempt}/${maxRetries} in ${Math.round(sleepTime)}ms...`
+          );
+
+          await new Promise((resolve) => setTimeout(resolve, sleepTime));
+          delay *= 2;
+          continue;
+        }
+
+        throw new Error(
+          `Gemini OCR Client Error (${status}): ${payload?.error?.message || 'Bad Request'}`
+        );
+      } catch (error) {
+        if (attempt === maxRetries) {
+          throw error;
+        }
+
+        const jitter = Math.random() * 1000;
+        const sleepTime = delay + jitter;
+        console.warn(
+          `[Gemini OCR Shield] Connection error: ${error.message}. Retrying attempt ${attempt}/${maxRetries} in ${Math.round(sleepTime)}ms...`
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, sleepTime));
+        delay *= 2;
+      }
     }
 
     const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';

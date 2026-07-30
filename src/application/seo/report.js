@@ -1,10 +1,6 @@
 // FILE: src/application/seo/report.js
 
-// Helper terisolasi untuk mengamankan karakter Markdown dari crash parse Telegram API
-function escapeMarkdown(text) {
-  if (!text) return '';
-  return text.toString().replace(/[_*`[\]]/g, '\\$&');
-}
+import { escapeMarkdown } from '../../core/utils/markdown.js';
 
 export class SeoTelegramReporter {
   constructor(telegramApi, logger = null) {
