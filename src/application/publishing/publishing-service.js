@@ -20,7 +20,7 @@ export class PublishingService {
     this.logger = logger;
     this.metrics = metrics;
     this.draftRepository = draftRepository;
-    this.config = config; // 🚀 Menyimpan global config
+    this.config = config;
   }
 
   async publish(draft) {
@@ -34,13 +34,11 @@ export class PublishingService {
 
       const featured = draft.source.featuredImage;
 
-      // 1. Deteksi dinamis kredensial Multi-Author dari whitelist KV
       const whitelist = await this.whitelistRepository.getAll();
       const userCredentials = whitelist.find((u) => Number(u.userId) === Number(draft.userId));
 
       let customAuth = null;
       if (userCredentials && userCredentials.wpUsername && userCredentials.wpAppPassword) {
-        // 🚀 DECRYPT PASSWORD MENGGUNAKAN KUNCI CONFIG AMAN (AES-GCM)
         const decryptedPassword = await decryptText(
           userCredentials.wpAppPassword,
           this.config.application.encryptionSecret
@@ -60,21 +58,28 @@ export class PublishingService {
         });
       }
 
-      // 2. Download Foto Telegram
       const file = await this.telegramApi.downloadFile(featured.fileId);
 
-      // 3. Upload Media WordPress menggunakan dynamic auth
+      // 🚀 SATUKAN METADATA ARTIKEL UNTUK OPTIMALISASI BERKAS MEDIA WORDPRESS
+      const metadata = {
+        title: draft.editorial.article.title || '',
+        altText: draft.editorial.seo.focusKeyword || '',
+        caption: draft.editorial.article.excerpt || draft.editorial.article.lead || '',
+        description: draft.editorial.seo.metaDescription || '',
+      };
+
+      // Upload Media WordPress menggunakan dynamic auth & penyuntikan metadata komprehensif
       const media = await this.wordpressProvider.uploadMedia(
         file.fileName,
         file.mimeType,
         file.buffer,
+        metadata, // 🚀 Suntikkan parameter metadata kesini
         customAuth
       );
 
-      // 4. Create Post menggunakan dynamic auth
+      // Create Post menggunakan dynamic auth
       const post = await this.wordpressProvider.createPost(draft.editorial, media.id, customAuth);
 
-      // 5. EVENT BUS DECOUPLING: Kirim sinyal bahwa artikel sukses diterbitkan
       try {
         const articleUrl = post.link;
         await this.eventBus.publish('ARTICLE_PUBLISHED', {
@@ -82,7 +87,7 @@ export class PublishingService {
           postId: post.id,
           draftId: draft.id,
           editorial: draft.editorial,
-          chatId: draft.chatId, // 🚀 BARIS KUNCI: Kirim Chat ID agar Telegram SEO Report tahu tujuan pengiriman!
+          chatId: draft.chatId,
         });
       } catch (eventError) {
         this.logger.error('Error triggering ARTICLE_PUBLISHED event subscribers', {
@@ -90,7 +95,6 @@ export class PublishingService {
         });
       }
 
-      // 6. ARCHIVE MEMORY LEWAT METHOD RESMI REPOSITORI
       try {
         await this.draftRepository.archiveDraftMemory(post.id, {
           id: post.id,

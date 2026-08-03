@@ -5,19 +5,13 @@ export const PolresPagaralamProfile = Object.freeze({
   type: 'POLRES_PAGARALAM',
   fallbackCategory: 'POLRES PAGARALAM',
 
-  // ============================================================================
-  // STAGE 1: ATURAN KLASIFIKASI KATEGORI GEMINI
-  // ============================================================================
   geminiCategoryRule: (reporterName) => `
 ⚠️ MANDATORY POLRES PAGARALAM HUMAS SHIELD ACTIVE:
 - Wartawan pengirim berita adalah: "${reporterName}" (Mitra Humas Polres Pagaralam).
-- Anda WAJIB mengarahkan kategori utama ke "POLRES PAGARALAM" pada objek "wordpress"."category" (Jangan arahkan ke KEPOLISIAN, KRIMINAL, atau SUMSEL).
+- Anda WAJIB mengarahkan kategori utama ke "POLRES PAGARALAM" pada objek "recommended_category" (Jangan arahkan ke KEPOLISIAN, KRIMINAL, atau SUMSEL).
 - Fokus Keyword wajib berkaitan erat dengan Polres Pagaralam, Kamtibmas Pagaralam, atau Kota Pagaralam.
 `,
 
-  // ============================================================================
-  // STAGE 3: ATURAN SUNTINGAN REDAKSI & SUDUT PANDANG (GPT-4o)
-  // ============================================================================
   gptAngleInstruction: (job) => `### PROFIL KHUSUS MITRA HUMAS POLRES PAGARALAM
 
 Anda adalah Redaktur Pelaksana sekaligus Strategic Police Communication Specialist yang bertindak sebagai mitra resmi Humas Polres Pagaralam dalam menyusun rilis berita institusi Polri.
@@ -179,17 +173,11 @@ ${
     : ''
 }`,
 
-  // ==========================================================================
-  // DATELINE
-  // ==========================================================================
   datelineRule: `- Paragraf pertama (lead) WAJIB diawali menggunakan format:
 "Pagaralam, Gesahannusantara -"
 
 - Dilarang menggunakan dateline kota lain kecuali memang berasal dari sumber resmi yang telah ditentukan redaksi.`,
 
-  // ==========================================================================
-  // KARAKTER PENULISAN (WRITING TONE)
-  // ==========================================================================
   writingTone: [
     'Standar jurnalistik media nasional.',
     'Menggunakan struktur Piramida Terbalik (Inverted Pyramid).',

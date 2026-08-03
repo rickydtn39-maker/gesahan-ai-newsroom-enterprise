@@ -1,3 +1,5 @@
+// FILE: src/application/editorial/schema/editorial-response-schema.js
+
 export const GEMINI_INGEST_SCHEMA = Object.freeze({
   type: 'object',
   required: [
@@ -12,7 +14,7 @@ export const GEMINI_INGEST_SCHEMA = Object.freeze({
   properties: {
     extractedInfo: {
       type: 'object',
-      required: ['who', 'what', 'when', 'where', 'why', 'how', 'details'],
+      required: ['who', 'what', 'when', 'where', 'why', 'how', 'details', 'editorialPlanning'],
       properties: {
         who: { type: 'string' },
         what: { type: 'string' },
@@ -41,6 +43,15 @@ export const GEMINI_INGEST_SCHEMA = Object.freeze({
             kutipan: { type: 'string' },
           },
         },
+        editorialPlanning: {
+          type: 'object',
+          required: ['riskNotes', 'missingInformation', 'editorialBrief'],
+          properties: {
+            riskNotes: { type: 'array', items: { type: 'string' } },
+            missingInformation: { type: 'array', items: { type: 'string' } },
+            editorialBrief: { type: 'string' },
+          },
+        },
       },
     },
     seo: {
@@ -62,7 +73,15 @@ export const GEMINI_INGEST_SCHEMA = Object.freeze({
     },
     newsValue: {
       type: 'object',
-      required: ['impact', 'conflict', 'humanInterest', 'novelty', 'publicInterest', 'score'],
+      required: [
+        'impact',
+        'conflict',
+        'humanInterest',
+        'novelty',
+        'publicInterest',
+        'score',
+        'matrixRating',
+      ],
       properties: {
         impact: { type: 'number' },
         conflict: { type: 'number' },
@@ -70,6 +89,7 @@ export const GEMINI_INGEST_SCHEMA = Object.freeze({
         novelty: { type: 'number' },
         publicInterest: { type: 'number' },
         score: { type: 'number' },
+        matrixRating: { type: 'string' },
       },
     },
     priority: {
@@ -78,9 +98,10 @@ export const GEMINI_INGEST_SCHEMA = Object.freeze({
     },
     confidence: {
       type: 'object',
-      required: ['ocrAccuracy'],
+      required: ['ocrAccuracy', 'editorialConfidence'],
       properties: {
         ocrAccuracy: { type: 'number' },
+        editorialConfidence: { type: 'string' },
       },
     },
     draftReporter: {
@@ -95,22 +116,21 @@ export const GEMINI_INGEST_SCHEMA = Object.freeze({
   },
 });
 
-export const GPT_EDITORIAL_SCHEMA = Object.freeze({
+export const GEMINI_EDITORIAL_SCHEMA = Object.freeze({
   type: 'object',
-  required: ['title', 'lead', 'content', 'qcReport'],
+  required: ['title', 'subtitle', 'excerpt', 'lead', 'body', 'editor_notes', 'internal_qc'],
   properties: {
     title: { type: 'string' },
+    subtitle: { type: 'string' },
+    excerpt: { type: 'string' },
     lead: { type: 'string' },
-    content: { type: 'string' },
-    qcReport: {
-      type: 'object',
-      required: ['factCheckPassed', 'noHallucinations', 'typosCorrected', 'notes'],
-      properties: {
-        factCheckPassed: { type: 'boolean' },
-        noHallucinations: { type: 'boolean' },
-        typosCorrected: { type: 'boolean' },
-        notes: { type: 'array', items: { type: 'string' } },
-      },
+    body: { type: 'string' },
+    editor_notes: { type: 'string' },
+    internal_qc: {
+      type: 'array',
+      items: { type: 'string' },
     },
   },
 });
+
+export const GPT_EDITORIAL_SCHEMA = GEMINI_EDITORIAL_SCHEMA;

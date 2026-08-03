@@ -5,19 +5,13 @@ export const PolrestabesPalembangProfile = Object.freeze({
   type: 'POLRESTABES_PALEMBANG',
   fallbackCategory: 'KEPOLISIAN',
 
-  // ============================================================================
-  // STAGE 1: ATURAN KLASIFIKASI KATEGORI GEMINI
-  // ============================================================================
   geminiCategoryRule: (reporterName) => `
 ⚠️ MANDATORY POLRESTABES PALEMBANG HUMAS SHIELD ACTIVE:
 - Wartawan pengirim berita adalah: "${reporterName}" (Mitra Humas Polrestabes Palembang).
-- Anda WAJIB mengarahkan kategori utama ke "KEPOLISIAN" pada objek "wordpress"."category" (Jangan arahkan ke KRIMINAL atau SUMSEL).
+- Anda WAJIB mengarahkan kategori utama ke "KEPOLISIAN" pada objek "recommended_category" (Jangan arahkan ke KRIMINAL atau SUMSEL).
 - Fokus Keyword wajib berkaitan erat dengan Polrestabes Palembang, Kamtibmas Palembang, atau Kota Palembang.
 `,
 
-  // ============================================================================
-  // STAGE 3: ATURAN SUNTINGAN REDAKSI & SUDUT PANDANG (GPT-4o)
-  // ============================================================================
   gptAngleInstruction: (job) => `### PROFIL KHUSUS MITRA HUMAS POLRESTABES PALEMBANG
 
 Anda adalah Redaktur Pelaksana sekaligus Strategic Police Communication Specialist yang bertindak sebagai mitra resmi Humas Polrestabes Palembang dalam menyusun rilis berita institusi Polri di wilayah hukum Kota Metropolitan Palembang.
@@ -28,7 +22,7 @@ Seluruh naskah wajib memenuhi standar:
 • Presisi Bahasa Indonesia (PUEBI)
 • SEO Media Online
 • Etika Kehumasan Pemerintah
-• Layak dipublikasikan media nasional tanpa revisi redaksi.
+• Layak dipublikasikan media nasional tanpa revision redaksi.
 
 ---------------------------------------------------------------------------
 
@@ -169,17 +163,11 @@ ${
     : ''
 }`,
 
-  // ==========================================================================
-  // DATELINE
-  // ==========================================================================
   datelineRule: `- Paragraf pertama (lead) WAJIB diawali menggunakan format:
 "Palembang, Gesahannusantara -"
 
 - Dilarang menggunakan dateline kota lain kecuali memang berasal dari sumber resmi yang telah ditentukan redaksi.`,
 
-  // ==========================================================================
-  // KARAKTER PENULISAN (WRITING TONE)
-  // ==========================================================================
   writingTone: [
     'Standar jurnalistik media nasional metropolitan.',
     'Menggunakan struktur Piramida Terbalik (Inverted Pyramid).',

@@ -30,7 +30,6 @@ export const CONFIG_SCHEMA = Object.freeze({
       type: 'array',
     },
     groupChatId: {
-      // 🚀 Skema validasi pengaman untuk ID Grup Redaksi
       required: false,
       type: 'string',
     },
@@ -38,16 +37,18 @@ export const CONFIG_SCHEMA = Object.freeze({
 
   gemini: {
     apiKey: {
-      required: false,
+      required: true,
       secret: true,
       type: 'string',
     },
-  },
-
-  openai: {
-    apiKey: {
-      required: false,
+    apiKeyStage2: {
+      required: false, // Set false agar backward compatible jika user hanya memasang 1 key saja
       secret: true,
+      type: 'string',
+    },
+    model: {
+      required: false,
+      defaultValue: 'gemini-2.5-flash',
       type: 'string',
     },
   },

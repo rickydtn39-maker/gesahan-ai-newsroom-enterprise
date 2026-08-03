@@ -47,13 +47,10 @@ export async function articleCommand(
 
     try {
       const env = container.has('env') ? container.resolve('env') : {};
-
-      // Ambil domain origin dinamis dari parameter pemanggilan
       const activeOrigin =
         origin ||
         (container.has('request') ? new URL(container.resolve('request').url).origin : null);
 
-      // Panggil sistem transkripsi cerdas asinkron/sinkron
       const transcriptResult = await fetchYoutubeTranscript(
         incomingText,
         env,
@@ -62,7 +59,6 @@ export async function articleCommand(
         activeOrigin
       );
 
-      // 🎙️ JALUR SUKSES 1: Jika AssemblyAI Asinkronus Webhook Aktif
       if (transcriptResult && transcriptResult.async) {
         const draft = await sessionManager.get(update.chatId);
         const updatedDraft = draft.copyWith({
@@ -74,12 +70,9 @@ export async function articleCommand(
           },
         });
         await sessionManager.save(updatedDraft);
-
-        // Beritahu wartawan bahwa transkripsi berjalan aman di latar belakang
         return await telegramApi.sendMessage(update.chatId, transcriptResult.message);
       }
 
-      // 🎙️ JALUR SUKSES 2: Jika Menggunakan Scraper Sinkronus Cepat (Fallback)
       const logger = container.resolve(TOKENS.LOGGER);
       logger.info('YouTube transcript fetched successfully via scraper', { chatId: update.chatId });
 
@@ -112,7 +105,7 @@ export async function articleCommand(
                 themeTitle: { type: 'string' },
                 extractedInfo: {
                   type: 'object',
-                  required: ['who', 'what', 'when', 'where', 'why', 'how', 'details'],
+                  required: ['who', 'what', 'when', 'where', 'why', 'how', 'details', 'editorialPlanning'],
                   properties: {
                     who: { type: 'string' },
                     what: { type: 'string' },
@@ -139,6 +132,15 @@ export async function articleCommand(
                         nomorPerkara: { type: 'string' },
                         lokasi: { type: 'string' },
                         kutipan: { type: 'string' },
+                      },
+                    },
+                    editorialPlanning: {
+                      type: 'object',
+                      required: ['riskNotes', 'missingInformation', 'editorialBrief'],
+                      properties: {
+                        riskNotes: { type: 'array', items: { type: 'string' } },
+                        missingInformation: { type: 'array', items: { type: 'string' } },
+                        editorialBrief: { type: 'string' },
                       },
                     },
                   },
@@ -169,6 +171,7 @@ export async function articleCommand(
                     'novelty',
                     'publicInterest',
                     'score',
+                    'matrixRating',
                   ],
                   properties: {
                     impact: { type: 'number' },
@@ -177,13 +180,17 @@ export async function articleCommand(
                     novelty: { type: 'number' },
                     publicInterest: { type: 'number' },
                     score: { type: 'number' },
+                    matrixRating: { type: 'string' },
                   },
                 },
                 priority: { type: 'string' },
                 confidence: {
                   type: 'object',
-                  required: ['ocrAccuracy'],
-                  properties: { ocrAccuracy: { type: 'number' } },
+                  required: ['ocrAccuracy', 'editorialConfidence'],
+                  properties: { 
+                    ocrAccuracy: { type: 'number' },
+                    editorialConfidence: { type: 'string' }
+                  },
                 },
                 draftReporter: {
                   type: 'object',
@@ -235,10 +242,7 @@ export async function articleCommand(
       );
     } catch (error) {
       await sessionManager.cancel(update.chatId);
-
-      // 🚀 DOUBLE-SAFETY: Saring karakter liar Markdown dari error message sebelum dikirim ke bot
       const escapedError = escapeMarkdown(error.message);
-
       return telegramApi.sendMessage(
         update.chatId,
         `❌ *Gagal memproses tautan YouTube:*\n\n${escapedError}\n\nSesi dibatalkan.`,
@@ -296,8 +300,9 @@ export async function articleCommand(
     });
     await sessionManager.save(lockedDraft);
 
-    await telegramApi.sendMessage(chatId, MESSAGES.WORKFLOW.STAGE1_LOADING);
-
+    // 🚀 REDUNDANCY FIXED: Hapus pengiriman loading message ganda disini,
+    // karena QueueManager.execute() di bawah akan mengirimkannya secara tunggal
+    // saat giliran antrean aktif dimulai.
     await QueueManager.add(chatId, update.userId, 'STAGE_1_INGEST', {}, container);
   };
 

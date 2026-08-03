@@ -19,17 +19,13 @@ export function loadConfiguration(environment) {
       botToken: environment.get('TELEGRAM_BOT_TOKEN') ?? null,
       webhookSecretToken: environment.get('TELEGRAM_SECRET_TOKEN') ?? null,
       allowedUsers,
-      groupChatId: environment.get('TELEGRAM_GROUP_CHAT_ID') ?? null, // 🚀 Membaca ID Grup Redaksi
+      groupChatId: environment.get('TELEGRAM_GROUP_CHAT_ID') ?? null,
     },
 
     gemini: {
       apiKey: environment.get('GEMINI_API_KEY') ?? null,
+      apiKeyStage2: environment.get('GEMINI_API_KEY_STAGE2') ?? null, // 🚀 Membaca kunci rahasia mandiri Stage 2
       model: environment.get('GEMINI_MODEL') ?? 'gemini-2.5-flash',
-    },
-
-    openai: {
-      apiKey: environment.get('OPENAI_API_KEY') ?? null,
-      model: environment.get('OPENAI_MODEL') ?? 'gpt-4o',
     },
 
     wordpress: {

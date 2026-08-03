@@ -1,21 +1,31 @@
-node_modules/
-dist/
-coverage/
+# FILE: .gitignore
 
-.wrangler/
+# Dependencies
+node_modules
+/.pnp
+.pnp.js
+
+# Testing
+coverage
+
+# Cloudflare Workers / Wrangler
+.wrangler
 .dev.vars
+dist
+.terraform
 .env
-.env.*
-!.env.example
 
-.DS_Store
-Thumbs.db
-
-.vscode/settings.json
-
+# Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
 
-*.local
+# Editor-specific files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store

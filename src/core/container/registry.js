@@ -8,7 +8,6 @@ import { DraftRepository, WhitelistRepository } from '../../infrastructure/persi
 
 import { TelegramApi } from '../../infrastructure/providers/telegram/index.js';
 import { GeminiProvider } from '../../infrastructure/providers/gemini/index.js';
-import { OpenAiProvider } from '../../infrastructure/providers/openai/index.js';
 import { WordPressProvider } from '../../infrastructure/providers/wordpress/index.js';
 import { GeminiOcrProvider } from '../../infrastructure/providers/ocr/index.js';
 import { SeoProvider } from '../../infrastructure/providers/seo/seo-provider.js';
@@ -29,7 +28,7 @@ export function createContainer(configuration, env, ctx = null, correlationId = 
 
   container.registerInstance(TOKENS.CONFIGURATION, configuration);
 
-  // 🚀 DAFTARKAN RUNTIME CTX & ENV UNTUK AKSES GLOBAL
+  // DAFTARKAN RUNTIME CTX & ENV UNTUK AKSES GLOBAL
   container.registerInstance('ctx', ctx);
   container.registerInstance('env', env);
 
@@ -47,6 +46,7 @@ export function createContainer(configuration, env, ctx = null, correlationId = 
     (c) => new SessionManager(c.resolve(TOKENS.DRAFT_REPOSITORY))
   );
 
+  // REGISTER GEMINI PROVIDER UNTUK STAGE 1 (MENGGUNAKAN API KEY 1)
   container.registerFactory(
     TOKENS.AI_PROVIDER,
     (c) =>
@@ -58,15 +58,18 @@ export function createContainer(configuration, env, ctx = null, correlationId = 
       )
   );
 
+  // REGISTER GEMINI PROVIDER UNTUK STAGE 2 (MENGGUNAKAN API KEY 2 DENGAN FALLBACK KE KEY 1)
   container.registerFactory(
     TOKENS.OPENAI_PROVIDER,
-    (c) =>
-      new OpenAiProvider(
-        configuration.openai.apiKey,
-        configuration.openai.model,
+    (c) => {
+      const stage2Key = configuration.gemini.apiKeyStage2 || configuration.gemini.apiKey;
+      return new GeminiProvider(
+        stage2Key,
+        configuration.gemini.model,
         c.resolve(TOKENS.LOGGER),
         c.resolve(TOKENS.METRICS)
-      )
+      );
+    }
   );
 
   container.registerFactory(
@@ -91,7 +94,7 @@ export function createContainer(configuration, env, ctx = null, correlationId = 
         c.resolve(TOKENS.EDITORIAL_ENGINE),
         c.resolve(TOKENS.LOGGER),
         c.resolve(TOKENS.METRICS),
-        c.resolve(TOKENS.WHITELIST_REPOSITORY) // 🚀 DI SUNTIKKAN DISINI
+        c.resolve(TOKENS.WHITELIST_REPOSITORY)
       )
   );
 

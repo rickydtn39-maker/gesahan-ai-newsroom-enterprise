@@ -1,3 +1,5 @@
+// FILE: tests/newroom.test.js
+
 import { describe, test, expect, vi } from 'vitest';
 import { Draft } from '../src/domain/draft/draft.js';
 import { Router } from '../src/app/router/router.js';
@@ -5,6 +7,7 @@ import { encryptText, decryptText } from '../src/core/security/crypto.js';
 import { validateConfiguration } from '../src/core/config/validator.js';
 import { WORKFLOW_STATE } from '../src/core/constants/workflow.js';
 import { TOKENS } from '../src/core/container/tokens.js';
+import { EditorialValidator } from '../src/application/editorial/validator/editorial-validator.js';
 
 describe('GESAHAN AI Newsroom Platform - Enterprise Unit Tests (Fase Final)', () => {
   // 1. DRAFT STATE & TRANSITION TEST
@@ -35,7 +38,6 @@ describe('GESAHAN AI Newsroom Platform - Enterprise Unit Tests (Fase Final)', ()
     const encryptedBase64_2 = await encryptText(plainCredential, encryptionKey);
     const decryptedText = await decryptText(encryptedBase64_1, encryptionKey);
 
-    // Dynamic salt menghasilkan cipher text acak yang berbeda meskipun input sama
     expect(encryptedBase64_1).not.toBe(encryptedBase64_2);
     expect(encryptedBase64_1).not.toBe(plainCredential);
     expect(decryptedText).toBe(plainCredential);
@@ -46,7 +48,7 @@ describe('GESAHAN AI Newsroom Platform - Enterprise Unit Tests (Fase Final)', ()
     const incompleteConfig = {
       application: {
         environment: 'production',
-        encryptionSecret: null, // Required but set to null
+        encryptionSecret: null,
       },
     };
 
@@ -60,14 +62,88 @@ describe('GESAHAN AI Newsroom Platform - Enterprise Unit Tests (Fase Final)', ()
       application: {
         encryptionSecret: 'some-secure-secret-32-chars-long',
       },
+      gemini: {
+        apiKey: 'dummy-api-key',
+      },
     };
 
     const validated = validateConfiguration(incompleteConfig);
-    // Verifikasi suntikan nilai default pada validation schema
     expect(validated.application.environment).toBe('development');
+    expect(validated.gemini.model).toBe('gemini-2.5-flash');
   });
 
-  // 4. GLOBAL ROUTER ERROR MIDDLEWARE EXCEPTION MAPPING TEST
+  // 4. DUAL GEMINI PIPELINE NESTED SCHEMA VALIDATION TEST
+  test('Editorial Validator correctly maps and verifies Dual Gemini Restored Nested Properties', () => {
+    const validator = new EditorialValidator();
+
+    const mockIngestOutput = {
+      extractedInfo: {
+        who: 'Kapolda Sumsel',
+        what: 'Wisuda Santri',
+        when: 'WIB',
+        where: 'Palembang',
+        why: 'Program pembinaan karakter',
+        how: 'Upacara resmi berlangsung khidmat',
+        details: {
+          pangkat: 'Irjen Pol',
+          jabatan: 'Kapolda Sumsel',
+          instansi: 'Polda Sumatera Selatan',
+          barangBukti: 'Buku',
+          nomorPerkara: 'N/A',
+          lokasi: 'Palembang',
+          kutipan: 'Sinergi bersama wisuda santri',
+        },
+        editorialPlanning: {
+          riskNotes: [],
+          missingInformation: [],
+          editorialBrief: 'Tulis secara humanis dan berwibawa.',
+        },
+      },
+      seo: {
+        focusKeyword: 'Kapolda Sumsel Wisuda Santri',
+        secondaryKeywords: ['Polda Sumsel', 'Wisuda Santri'],
+        metaDescription: 'Polda Sumsel berkomitmen penuh menjaga kamtibmas.',
+      },
+      wordpress: {
+        category: 'KEPOLISIAN',
+        tags: ['polda sumsel', 'wisuda santri'],
+      },
+      newsValue: {
+        impact: 80,
+        conflict: 10,
+        humanInterest: 40,
+        novelty: 20,
+        publicInterest: 85,
+        score: 90,
+        matrixRating: 'Impact ★★★★☆ | Human Interest ★★★★☆',
+      },
+      priority: 'B',
+      confidence: {
+        ocrAccuracy: 100,
+        editorialConfidence: 'High',
+      },
+      draftReporter: {
+        title: 'Wisuda Akbar Santri Bersama Polda Sumsel',
+        lead: 'Palembang, Gesahannusantara - Kapolda Sumsel menghadiri wisuda akbar...',
+        content: 'Draf isi tulisan murni dari rilis pers...',
+      },
+    };
+
+    const mockEditorialOutput = {
+      title: 'Polda Sumsel Siap Siaga Jamin Kamtibmas Bumi Sriwijaya',
+      subtitle: 'Komitmen Harkamtibmas Polda Sumsel',
+      excerpt: 'Polda Sumsel memperketat pengamanan wilayah.',
+      lead: 'Palembang, Gesahannusantara - Polda Sumsel berkomitmen penuh menjamin stabilitas.',
+      body: 'Untuk mewujudkan hal tersebut, jajaran kepolisian intensif menggelar patroli berkala...',
+      editor_notes: 'Penyuntingan menggunakan tone formal kepolisian.',
+      internal_qc: ['[HEADLINE: PASS] - Sesuai', '[LEAD: PASS] - Sesuai'],
+    };
+
+    expect(validator.validateIngest(mockIngestOutput)).toEqual(mockIngestOutput);
+    expect(validator.validateEditorial(mockEditorialOutput)).toEqual(mockEditorialOutput);
+  });
+
+  // 5. GLOBAL ROUTER ERROR MIDDLEWARE EXCEPTION MAPPING TEST
   test('Global Router catch runtime handler exceptions mapping and output JSON', async () => {
     const router = new Router();
     const correlationId = 'test-correlation-uuid-99';
@@ -107,7 +183,6 @@ describe('GESAHAN AI Newsroom Platform - Enterprise Unit Tests (Fase Final)', ()
     expect(body.message).toBe('Sistem WordPress Mati Terputus!');
     expect(body.correlationId).toBe(correlationId);
 
-    // Memverifikasi asinkron assertions pada Vitest mock Logger & Metrics
     expect(mockLogger.error).toHaveBeenCalled();
     expect(mockMetrics.increment).toHaveBeenCalled();
   });

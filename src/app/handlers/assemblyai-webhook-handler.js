@@ -49,13 +49,12 @@ export async function assemblyAiWebhookHandler(request, context) {
         '🎙️ *Transkripsi Audio Selesai!* Mengunduh teks transkrip...'
       );
 
-      // Unduh transkrip teks lengkap dari AssemblyAI menggunakan kredensial dari config
+      // Unduh transkrip teks lengkap dari AssemblyAI menggunakan kunci API Gemini yang terjamin aktif
       const transcriptResponse = await fetch(
         `https://api.assemblyai.com/v2/transcript/${payload.transcript_id}`,
         {
           headers: {
-            authorization:
-              context.configuration.openai.apiKey || context.configuration.gemini.apiKey, // Amankan fallback key
+            authorization: context.configuration.gemini.apiKey,
           },
         }
       );

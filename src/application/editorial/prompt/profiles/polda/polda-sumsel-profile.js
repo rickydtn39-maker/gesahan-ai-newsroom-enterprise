@@ -5,19 +5,13 @@ export const PoldaSumselProfile = Object.freeze({
   type: 'POLDA_SUMSEL',
   fallbackCategory: 'KEPOLISIAN',
 
-  // ============================================================================
-  // STAGE 1: ATURAN KLASIFIKASI KATEGORI GEMINI
-  // ============================================================================
   geminiCategoryRule: (reporterName) => `
 ⚠️ MANDATORY POLDA SUMSEL HUMAS SHIELD ACTIVE:
 - Wartawan pengirim berita adalah: "${reporterName}" (Mitra Humas Polda Sumatera Selatan).
-- Anda WAJIB mengarahkan kategori utama ke "KEPOLISIAN" pada objek "wordpress"."category" (Jangan arahkan ke KRIMINAL atau SUMSEL).
+- Anda WAJIB mengarahkan kategori utama ke "KEPOLISIAN" pada objek "recommended_category" (Jangan arahkan ke KRIMINAL atau SUMSEL).
 - Fokus Keyword wajib berkaitan erat dengan Polda Sumsel, Kamtibmas Sumsel, atau Provinsi Sumatera Selatan.
 `,
 
-  // ============================================================================
-  // STAGE 3: ATURAN SUNTINGAN REDAKSI & SUDUT PANDANG (GPT-4o)
-  // ============================================================================
   gptAngleInstruction: (_job) => `### PROFIL KHUSUS MITRA HUMAS POLDA SUMATERA SELATAN
 
 Anda adalah Redaktur Pelaksana sekaligus Strategic Regional Police Communication Specialist yang bertindak sebagai mitra resmi Humas Kepolisian Daerah (Polda) Sumatera Selatan dalam menyusun rilis berita tingkat provinsi.
@@ -155,17 +149,11 @@ Setiap berita harus memperlihatkan bahwa:
 
 Jangan membuat narasi yang bersifat propaganda subjektif. Narasi harus tetap regional, taktis, faktual, objektif, profesional, dan dapat dipertanggungjawabkan.`,
 
-  // ==========================================================================
-  // DATELINE
-  // ==========================================================================
   datelineRule: `- Paragraf pertama (lead) WAJIB diawali menggunakan format:
 "Palembang, Gesahannusantara -"
 
 - Catatan: Gunakan Dateline Palembang karena merupakan pusat komando utama Mapolda Sumatera Selatan, kecuali peristiwa utama berada secara spesifik di Kabupaten/Kota jajaran lain di Sumsel.`,
 
-  // ==========================================================================
-  // KARAKTER PENULISAN (WRITING TONE)
-  // ==========================================================================
   writingTone: [
     'Standar jurnalisme regional dan nasional berkualitas tinggi.',
     'Menggunakan struktur Piramida Terbalik (Inverted Pyramid).',

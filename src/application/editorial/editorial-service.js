@@ -32,11 +32,8 @@ export class EditorialService {
       const user = whitelist.find((u) => Number(u.userId) === Number(userId));
 
       const name = user ? user.name : `Wartawan #${userId}`;
-
-      // 🚀 DETEKSI DETERMINISTIK: Ambil tipe profil langsung dari database KV Whitelist
       let type = user && user.type ? user.type : 'GENERAL';
 
-      // Fallback pencarian string nama (Backwards Compatibility jika KV belum di-update)
       if (type === 'GENERAL') {
         const lowerName = name.toLowerCase();
         if (lowerName.includes('pagaralam')) {
@@ -93,7 +90,13 @@ export class EditorialService {
       );
       const validated = this.validator.validateEditorial(rawResult);
 
-      const fullText = `${validated.lead}\n\n${validated.content}`;
+      const focusKeyword = stage1Result.seo?.focusKeyword || '';
+      const metaDescription = stage1Result.seo?.metaDescription || '';
+      const category = stage1Result.wordpress?.category || 'BERITA';
+      const tags = stage1Result.wordpress?.tags || [];
+      const score = stage1Result.newsValue?.score || 0;
+
+      const fullText = `${validated.lead}\n\n${validated.body}`;
       const wordCount = fullText.split(/\s+/).filter(Boolean).length;
       const readingTime = Math.max(1, Math.ceil(wordCount / 200));
       const slug = slugify(validated.title);
@@ -102,13 +105,14 @@ export class EditorialService {
         article: {
           title: validated.title,
           lead: validated.lead,
-          content: validated.content,
+          content: validated.body,
+          excerpt: validated.excerpt || validated.lead || '', // 🚀 Memetakan parameter excerpt hasil tulisan Stage 2
         },
         seo: {
-          focusKeyword: stage1Result.focusKeyword || stage1Result.seo?.focusKeyword || '',
-          metaDescription: stage1Result.metaDescription || stage1Result.seo?.metaDescription || '',
-          category: stage1Result.wordpress?.category || 'BERITA',
-          tags: stage1Result.wordpress?.tags || [],
+          focusKeyword,
+          metaDescription,
+          category,
+          tags,
           slug,
         },
         statistics: {
@@ -116,8 +120,8 @@ export class EditorialService {
           readingTime,
         },
         quality: {
-          score: stage1Result.newsValue?.score || 0,
-          notes: validated.qcReport.notes,
+          score,
+          notes: validated.internal_qc || [validated.editor_notes],
         },
       });
 

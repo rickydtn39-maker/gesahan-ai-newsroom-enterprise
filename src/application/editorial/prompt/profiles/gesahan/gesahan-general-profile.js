@@ -3,20 +3,14 @@
 export const GesahanGeneralProfile = Object.freeze({
   name: 'Gesahan General Profile',
   type: 'GENERAL',
-  fallbackCategory: null, // Dinamis menggunakan pohon keputusan klasifikasi Gemini (Stage 1)
+  fallbackCategory: null,
 
-  // ============================================================================
-  // STAGE 1: ATURAN KLASIFIKASI KATEGORI GEMINI
-  // ============================================================================
   geminiCategoryRule: (_reporterName) => `
 * Tentukan kategori dari daftar valid secara objektif berdasarkan isi naskah berita secara murni.
 * Ikuti alur pohon keputusan (Decision-Tree) secara ketat untuk menemukan kategori yang paling spesifik.
 * Tentukan Focus Keyword yang memiliki volume pencarian tinggi dan relevan secara geografis di wilayah Sumatera Selatan atau regional terkait.
 `,
 
-  // ============================================================================
-  // STAGE 3: ATURAN SUNTINGAN REDAKSI & SUDUT PANDANG (GPT-4o)
-  // ============================================================================
   gptAngleInstruction: (job) => {
     const defaultInstruction = `### ANGLE / SUDUT PANDANG PENULISAN (DEFAULT AI):
 - Tentukan angle terbaik secara otomatis berdasarkan NEWS VALUE FRAMEWORK tingkat tinggi. Prioritaskan unsur yang memiliki dampak publik terluas.`;
@@ -41,7 +35,7 @@ Apabila wartawan tidak menginstruksikan angle khusus secara tertulis, Anda wajib
    4) Conflict (Ketegangan, sengketa, kontroversi, penyelesaian masalah/kasus).
    5) Accountability (Pertanggungjawaban pejabat publik, transparansi anggaran, hukum).
    6) Prominence (Keterlibatan tokoh penting/publik).
-   7) Timeliness (Kebaruan, aktualitas, urgensi waktu).
+   7) Timeliness (Kebaruan, aktualitas, urgen waktu).
    8) Proximity (Kedekatan geografis, budaya, emosional pembaca).
    9) Novelty (Keunikan, kelangkaan, hal baru yang luar biasa).
    10) Magnitude (Skala besarnya angka, kerugian, atau dampak material).
@@ -159,17 +153,11 @@ ${job.angle ? customInstruction : defaultInstruction}
 `.trim();
   },
 
-  // ==========================================================================
-  // DATELINE
-  // ==========================================================================
   datelineRule: `- Paragraf pertama (lead) WAJIB diawali dengan Dateline lokasi kejadian aktual dengan format:
 "[Nama Kabupaten/Kota], Gesahannusantara - [Narasi]".
 
 - PENTING (DETEKSI GEOGRAFIS AKTUAL): Analisis lokasi fisik tempat peristiwa utama terjadi (locus delicti) secara jeli dari naskah. Jangan gunakan nama kota/institusi perilis rilis pers jika kejadian aslinya berada di daerah lain yang berbeda!`,
 
-  // ==========================================================================
-  // KARAKTER PENULISAN (WRITING TONE)
-  // ==========================================================================
   writingTone: [
     'Standar jurnalisme berkualitas tinggi media nasional terpercaya.',
     'Menggunakan struktur Piramida Terbalik (Inverted Pyramid).',
