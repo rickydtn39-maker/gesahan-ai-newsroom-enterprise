@@ -15,10 +15,11 @@ export class EditorialValidator {
 
   validateEditorial(result) {
     if (!result) throw new Error('Editorial Engine output is null.');
-    if (!result.title) throw new Error('Missing "title" in Gemini Managing Editor output.');
-    if (!result.lead) throw new Error('Missing "lead" in Gemini Managing Editor output.');
-    if (!result.body) throw new Error('Missing "body" in Gemini Managing Editor output.');
-    if (!result.internal_qc) throw new Error('Missing "internal_qc" in Gemini Managing Editor output.');
+    if (!result.title) throw new Error('Missing "title" in Gemini Narrative output.');
+    if (!result.subtitle) throw new Error('Missing "subtitle" in Gemini Narrative output.');
+    if (!result.excerpt) throw new Error('Missing "excerpt" in Gemini Narrative output.');
+    if (!result.lead) throw new Error('Missing "lead" in Gemini Narrative output.');
+    if (!result.body) throw new Error('Missing "body" in Gemini Narrative output.');
     return result;
   }
 }

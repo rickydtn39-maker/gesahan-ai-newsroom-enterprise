@@ -118,18 +118,13 @@ export const GEMINI_INGEST_SCHEMA = Object.freeze({
 
 export const GEMINI_EDITORIAL_SCHEMA = Object.freeze({
   type: 'object',
-  required: ['title', 'subtitle', 'excerpt', 'lead', 'body', 'editor_notes', 'internal_qc'],
+  required: ['title', 'subtitle', 'excerpt', 'lead', 'body'], // 🚀 Parameter administratif dihapus secara mutlak
   properties: {
     title: { type: 'string' },
     subtitle: { type: 'string' },
     excerpt: { type: 'string' },
     lead: { type: 'string' },
     body: { type: 'string' },
-    editor_notes: { type: 'string' },
-    internal_qc: {
-      type: 'array',
-      items: { type: 'string' },
-    },
   },
 });
 

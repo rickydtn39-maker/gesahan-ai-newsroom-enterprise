@@ -135,8 +135,6 @@ describe('GESAHAN AI Newsroom Platform - Enterprise Unit Tests (Fase Final)', ()
       excerpt: 'Polda Sumsel memperketat pengamanan wilayah.',
       lead: 'Palembang, Gesahannusantara - Polda Sumsel berkomitmen penuh menjamin stabilitas.',
       body: 'Untuk mewujudkan hal tersebut, jajaran kepolisian intensif menggelar patroli berkala...',
-      editor_notes: 'Penyuntingan menggunakan tone formal kepolisian.',
-      internal_qc: ['[HEADLINE: PASS] - Sesuai', '[LEAD: PASS] - Sesuai'],
     };
 
     expect(validator.validateIngest(mockIngestOutput)).toEqual(mockIngestOutput);
