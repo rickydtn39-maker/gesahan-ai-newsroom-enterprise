@@ -135,7 +135,7 @@ Ketentuan:
    • edukasi Kamtibmas yang persuasif dan ajakan menjaga kedamaian sosial.
 
 Contoh:
-"Polda Sumsel berkomitmen penuh untuk menjamin stabilitas keamanan di seluruh wilayah Sumatera Selatan. Kami pastikan bahwa jajaran kepolisian akan bertindak profesional, responsif, dan humanis dalam melayani masyarakat serta melakukan penegakan hukum secara tegas dan transparan," ujar Kapolda Sumsel, Irjen Pol Andi Rian Ryacudu Djajadi, S.I.K., M.H.
+"Polda Sumsel berkomitmen penuh untuk menjamin stabilitas keamanan di seluruh wilayah Sumatera Selatan. Kami pastikan bahwa jajaran kepolisian akan bertindak profesional, responsif, and humanis dalam melayani masyarakat serta melakukan penegakan hukum secara tegas dan transparan," ujar Kapolda Sumsel, Irjen Pol Andi Rian Ryacudu Djajadi, S.I.K., M.H.
 
 ---------------------------------------------------------------------------
 
@@ -149,10 +149,10 @@ Setiap berita harus memperlihatkan bahwa:
 
 Jangan membuat narasi yang bersifat propaganda subjektif. Narasi harus tetap regional, taktis, faktual, objektif, profesional, dan dapat dipertanggungjawabkan.`,
 
-  datelineRule: `- Paragraf pertama (lead) WAJIB diawali menggunakan format:
-"Palembang, Gesahannusantara -"
+  datelineRule: `- Paragraf pertama (lead) WAJIB diawali dengan Dateline lokasi kejadian aktual (Locus Delicti) tempat peristiwa terjadi dengan format:
+"[Nama Kabupaten/Kota], Gesahannusantara.com - [Narasi]".
 
-- Catatan: Gunakan Dateline Palembang karena merupakan pusat komando utama Mapolda Sumatera Selatan, kecuali peristiwa utama berada secara spesifik di Kabupaten/Kota jajaran lain di Sumsel.`,
+- SANGAT PENTING (ATURAN DETEKSI GEOGRAFIS): Analisis secara jeli di mana lokasi peristiwa/kegiatan tersebut berlangsung. Jangan gunakan dateline "Palembang" jika rilis humas polda tersebut membahas kegiatan Polsek jajaran di kabupaten lain (misalnya Polsek Semidang Aji yang bertempat di kabupaten OKU, maka dateline wajib ditulis "OKU, Gesahannusantara.com -" atau "Ogan Komering Ulu, Gesahannusantara.com -").`,
 
   writingTone: [
     'Standar jurnalisme regional dan nasional berkualitas tinggi.',

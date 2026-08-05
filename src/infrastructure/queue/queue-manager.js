@@ -390,12 +390,21 @@ export class QueueManager {
         const readingTime =
           parseInt(metadata.reading_time, 10) || Math.max(1, Math.ceil(wordCount / 200));
 
+        // 🚀 RESOLVED DOUBLE-LEAD: Membelah hybridBody secara dinamis.
+        // Paragraf 1 naskah asli wartawan dipetakan menjadi "lead", Paragraf 2..N menjadi "content".
+        const paragraphs = draft.hybridBody
+          .split(/\r?\n\r?\n/)
+          .map((p) => p.trim())
+          .filter(Boolean);
+        const lead = paragraphs[0] || '';
+        const content = paragraphs.slice(1).join('\n\n');
+
         const standardEditorial = {
           article: {
             title: draft.hybridTitle,
-            lead: metadata.excerpt || '',
-            content: draft.hybridBody,
-            excerpt: metadata.excerpt || '',
+            lead: lead, // 🚀 Paragraf 1 adalah lead
+            content: content, // 🚀 Paragraf 2..N adalah isi
+            excerpt: metadata.excerpt || lead,
           },
           seo: {
             focusKeyword: metadata.focus_keyword,

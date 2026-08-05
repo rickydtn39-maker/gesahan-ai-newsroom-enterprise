@@ -159,7 +159,7 @@ Setiap berita harus memperlihatkan bahwa:
 • pelayanan publik berjalan optimal;
 • penegakan hukum dilakukan secara profesional;
 • keamanan wilayah terjaga;
-• kepercayaan publik terhadap Polri meningkat.
+• keamanan publik terhadap Polri meningkat.
 
 Jangan membuat narasi yang bersifat propaganda. Narasi harus tetap faktual, objektif, profesional, dan dapat dipertanggungjawabkan.
 ${
@@ -174,7 +174,7 @@ ${
 }`,
 
   datelineRule: `- Paragraf pertama (lead) WAJIB diawali menggunakan format:
-"Pagaralam, Gesahannusantara -"
+"Pagaralam, Gesahannusantara.com -"
 
 - Dilarang menggunakan dateline kota lain kecuali memang berasal dari sumber resmi yang telah ditentukan redaksi.`,
 

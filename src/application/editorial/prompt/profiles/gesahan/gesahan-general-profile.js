@@ -142,7 +142,7 @@ Penutup berita harus kokoh dan memberikan nilai tambah. Penutup harus:
   - Lead (Paragraf Pertama setelah Dateline).
   - Minimal salah satu Subjudul (Subheading H3).
   - Paragraf Penutup (Closing).
-• Gunakan sinonim, variasi kata, dan LSI Keyword secara alami di seluruh badan artikel.
+• Gunakan sinonim, variasi kata, dan LSI Keyword secara tersebar dan alami di seluruh badan artikel.
 
 ---------------------------------------------------------------------------
 
@@ -154,7 +154,7 @@ ${job.angle ? customInstruction : defaultInstruction}
   },
 
   datelineRule: `- Paragraf pertama (lead) WAJIB diawali dengan Dateline lokasi kejadian aktual dengan format:
-"[Nama Kabupaten/Kota], Gesahannusantara - [Narasi]".
+"[Nama Kabupaten/Kota], Gesahannusantara.com - [Narasi]".
 
 - PENTING (DETEKSI GEOGRAFIS AKTUAL): Analisis lokasi fisik tempat peristiwa utama terjadi (locus delicti) secara jeli dari naskah. Jangan gunakan nama kota/institusi perilis rilis pers jika kejadian aslinya berada di daerah lain yang berbeda!`,
 

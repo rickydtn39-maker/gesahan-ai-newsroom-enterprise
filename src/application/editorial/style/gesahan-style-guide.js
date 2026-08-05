@@ -1,3 +1,5 @@
+// FILE: src/application/editorial/style/gesahan-style-guide.js
+
 export const GESAHAN_STYLE_GUIDE = Object.freeze({
   identity: {
     name: 'GESAHAN Editorial Engine',
@@ -16,7 +18,7 @@ export const GESAHAN_STYLE_GUIDE = Object.freeze({
   headline: {
     rules: [
       'Panjang ideal 55-70 karakter, maksimal 75 karakter agar tetap optimal untuk SEO dan keterbacaan di media sosial.',
-      'Judul wajib menggunakan kalimat aktif dan memiliki minimal satu kata kerja aktif yang kuat (Strong Verbs).',
+      'Judul wajib menggunakan kalimat aktif and memiliki minimal satu kata kerja aktif yang kuat (Strong Verbs).',
       'Hindari clickbait murahan, namun tetap memicu rasa ingin tahu yang tinggi (curiosity gap) secara elegan.',
       'Dilarang menggunakan kata bersayap, metafora berlebihan, atau bahasa yang terlalu puitis pada judul.',
     ],
@@ -24,9 +26,9 @@ export const GESAHAN_STYLE_GUIDE = Object.freeze({
 
   lead: {
     rules: [
-      'Paragraf pertama (lead) WAJIB diawali dengan Dateline lokasi kejadian aktual dengan format: "[Nama Kabupaten/Kota], Gesahannusantara - [Narasi]".',
-      'SANGAT PENTING (DETEKSI LOKASI AKTUAL): Analisis lokasi fisik tempat peristiwa terjadi (locus delicti) secara jeli. Jangan terkecoh oleh lokasi institusi perilis pers, kantor kepolisian, lokasi konferensi pers, maupun lokasi narasumber berada.',
-      'Jika terdapat lebih dari satu lokasi, gunakan lokasi utama tempat peristiwa utama terjadi. Jika lokasi kejadian tidak dapat dipastikan secara eksplisit, gunakan lokasi paling spesifik yang tersedia pada sumber. Jangan pernah mengarang lokasi.',
+      'Paragraf pertama (lead) WAJIB diawali dengan Dateline lokasi kejadian aktual dengan format: "[Nama Kabupaten/Kota], Gesahannusantara.com - [Narasi]".',
+      'SANGAT PENTING (DETEKSI LOKASI AKTUAL / LOCUS DELICTI): Analisis lokasi fisik tempat peristiwa terjadi secara jeli. Jangan terkecoh oleh lokasi institusi perilis rilis pers, kantor humas polda, lokasi konferensi pers, maupun lokasi narasumber berada.',
+      'Jika rilis pers dikeluarkan oleh Polda Sumsel (yang bertempat di Palembang) namun membahas kasus atau kegiatan Polsek/Polres jajaran di daerah (misal: Semidang Aji di OKU, atau Gelumbang di Muara Enim), maka Dateline WAJIB ditulis menggunakan lokasi daerah tersebut: "OKU, Gesahannusantara.com -" atau "Muara Enim, Gesahannusantara.com -", BUKAN "Palembang".',
       'Maksimal 2 kalimat pendek untuk paragraf pembuka (lead) ini.',
       'Kalimat pertama wajib menjadi hook berbasis fakta (fact-based hook) yang memancing rasa ingin tahu pembaca untuk melanjutkan membaca tanpa melebih-lebihkan informasi atau menambahkan fakta baru.',
     ],

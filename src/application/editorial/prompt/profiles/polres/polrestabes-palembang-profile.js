@@ -83,7 +83,7 @@ Tersangka ditulis menggunakan:
 Inisial + usia.
 Contoh: A (35)
 
-Korban menggunakan:
+Corban menggunakan:
 Inisial + usia.
 Contoh: R (27)
 
@@ -164,7 +164,7 @@ ${
 }`,
 
   datelineRule: `- Paragraf pertama (lead) WAJIB diawali menggunakan format:
-"Palembang, Gesahannusantara -"
+"Palembang, Gesahannusantara.com -"
 
 - Dilarang menggunakan dateline kota lain kecuali memang berasal dari sumber resmi yang telah ditentukan redaksi.`,
 
