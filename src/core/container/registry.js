@@ -59,18 +59,15 @@ export function createContainer(configuration, env, ctx = null, correlationId = 
   );
 
   // REGISTER GEMINI PROVIDER UNTUK STAGE 2 (MENGGUNAKAN API KEY 2 DENGAN FALLBACK KE KEY 1)
-  container.registerFactory(
-    TOKENS.OPENAI_PROVIDER,
-    (c) => {
-      const stage2Key = configuration.gemini.apiKeyStage2 || configuration.gemini.apiKey;
-      return new GeminiProvider(
-        stage2Key,
-        configuration.gemini.model,
-        c.resolve(TOKENS.LOGGER),
-        c.resolve(TOKENS.METRICS)
-      );
-    }
-  );
+  container.registerFactory(TOKENS.OPENAI_PROVIDER, (c) => {
+    const stage2Key = configuration.gemini.apiKeyStage2 || configuration.gemini.apiKey;
+    return new GeminiProvider(
+      stage2Key,
+      configuration.gemini.model,
+      c.resolve(TOKENS.LOGGER),
+      c.resolve(TOKENS.METRICS)
+    );
+  });
 
   container.registerFactory(
     TOKENS.OCR_PROVIDER,

@@ -5,9 +5,13 @@ import { WORKFLOW_STATE } from '../../core/constants/index.js';
 import {
   createAngleKeyboard,
   createReviewKeyboard,
-  createMainKeyboard,
-  createThemeSelectionKeyboard,
+  createStartSelectionKeyboard,
 } from '../../application/telegram/keyboards/index.js';
+
+// IMPOR MODUL BARU UNTUK KEPATUHAN HYBRID EDITOR
+import { WORDPRESS_CATEGORY_MAP } from '../providers/wordpress/category-map.js';
+import { getHybridMetadataTemplate } from '../../application/editorial/prompt/templates/hybrid-metadata-template.js';
+import { HYBRID_RESPONSE_SCHEMA } from '../../application/editorial/schema/hybrid-response-schema.js';
 
 const QUEUE_KEY = 'newsroom:global_queue';
 const MAX_LOCK_TIME_MS = 2 * 60 * 1000; // Proteksi antrean macet (2 Menit)
@@ -22,7 +26,7 @@ export class QueueManager {
   static async clearGlobalQueue(container) {
     const kv = container.resolve(TOKENS.DRAFT_REPOSITORY).storage.namespace;
     const logger = container.resolve(TOKENS.LOGGER);
-    
+
     logger.info('[Queue Manager] Emergency global queue flush executed.');
     await kv.put(QUEUE_KEY, JSON.stringify({ active: null, items: [] }));
   }
@@ -47,10 +51,12 @@ export class QueueManager {
 
     if (!queue.active || isLockExpired) {
       if (isLockExpired) {
-        logger.warn('Previous queue lock expired, forcing release, clearing old piled items and executing new task', {
-          expiredTask: queue.active,
-        });
-        // 🚀 AUTO-PURGE ON EXPIRY: Jika antrean lama kedaluwarsa/hang, sapu bersih sisa draf menumpuk yang sudah hang
+        logger.warn(
+          'Previous queue lock expired, forcing release, clearing old piled items and executing new task',
+          {
+            expiredTask: queue.active,
+          }
+        );
         queue.items = [];
       }
 
@@ -64,7 +70,6 @@ export class QueueManager {
         QueueManager.execute(queue.active, container);
       }
     } else {
-      // Masukkan ke dalam antrean jika bot sedang sibuk memproses data wartawan lain
       queue.items.push({ chatId, userId, userName, taskType, payload, createdAt: now });
       await kv.put(QUEUE_KEY, JSON.stringify(queue));
 
@@ -94,9 +99,11 @@ export class QueueManager {
     logger.info('Starting queued task execution', { taskType: task.taskType, userId: task.userId });
 
     try {
-      // Jeda ritmik wajib agar API request tersebar aman
       await new Promise((resolve) => setTimeout(resolve, 3000));
 
+      // =========================================================================
+      // [A] TASK WORKFLOW AUTOMATIC PIPELINE (DEFAULT)
+      // =========================================================================
       if (task.taskType === 'STAGE_1_INGEST') {
         let lockedDraft = await sessionManager.get(task.chatId);
         if (!lockedDraft) {
@@ -268,12 +275,6 @@ export class QueueManager {
         logger.info('Publishing process successfully completed.', analyticsLog);
         metrics.increment('publishing_completed', 1, { priority: draft.stage1.priority });
 
-        const publishedThemeId = draft.stage1?.id;
-        let remainingThemes = [];
-        if (draft.stage1Multi?.themes) {
-          remainingThemes = draft.stage1Multi.themes.filter((t) => t.id !== publishedThemeId);
-        }
-
         const escapedTitle = escapeMarkdown(draft.editorial.article.title);
         const escapedAuthor = escapeMarkdown(task.userName);
         const escapedCategory = escapeMarkdown(draft.editorial.seo.category);
@@ -294,41 +295,12 @@ export class QueueManager {
           '━━━━━━━━━━━━━━━━━━',
         ].join('\n');
 
-        if (remainingThemes.length > 0) {
-          const updatedMultiDraft = draft.copyWith({
-            state: WORKFLOW_STATE.WAITING_THEME_SELECTION,
-            stage1: null,
-            editorial: null,
-            angle: null,
-            source: {
-              ...draft.source,
-              featuredImage: null,
-            },
-            stage1Multi: {
-              themes: remainingThemes,
-            },
-          });
-
-          await sessionManager.save(updatedMultiDraft);
-
-          await telegramApi.sendMessage(
-            task.chatId,
-            [
-              publishReportText,
-              `🎉 *Satu tema berhasil diterbitkan!* Masih ada *${remainingThemes.length} tema berita* lainnya dari podcast ini.`,
-              '',
-              'Silakan pilih tema selanjutnya untuk diproses, atau klik *🏁 Selesai & Tutup* jika sudah selesai.',
-            ].join('\n'),
-            createThemeSelectionKeyboard(remainingThemes)
-          );
-        } else {
-          await sessionManager.cancel(task.chatId);
-          await telegramApi.sendMessage(
-            task.chatId,
-            `${publishReportText}\nSesi draf ini telah ditutup dengan aman. Silakan klik \"📰 Berita Baru\" untuk memulai kembali.`,
-            createMainKeyboard()
-          );
-        }
+        await sessionManager.cancel(task.chatId);
+        await telegramApi.sendMessage(
+          task.chatId,
+          `${publishReportText}\nSesi draf ini telah ditutup dengan aman. Silakan pilih menu di bawah ini untuk memulai kembali.`,
+          createStartSelectionKeyboard()
+        );
 
         const config = container.resolve(TOKENS.CONFIGURATION);
         if (config.telegram.groupChatId) {
@@ -336,6 +308,157 @@ export class QueueManager {
             await telegramApi.sendMessage(config.telegram.groupChatId, publishReportText);
           } catch (groupError) {
             logger.error('Failed to send publish success report to Coordination Group', {
+              error: groupError.message,
+            });
+          }
+        }
+      }
+
+      // =========================================================================
+      // [B] TASK WORKFLOW HYBRID EDITOR (WORKFLOW BARU)
+      // =========================================================================
+      else if (task.taskType === 'HYBRID_STAGE_3_ANALYZE') {
+        const draft = await sessionManager.get(task.chatId);
+        if (!draft) {
+          logger.warn('HYBRID_STAGE_3_ANALYZE skipped: draft session not found', {
+            chatId: task.chatId,
+          });
+          return;
+        }
+
+        await telegramApi.sendMessage(
+          task.chatId,
+          [
+            '🤖 *Gemini sedang melakukan analisis editorial...*',
+            '',
+            '✔ Analisis struktur',
+            '✔ Menentukan kategori',
+            '✔ Menentukan SEO',
+            '✔ Menentukan metadata',
+            '✔ Menyiapkan publikasi',
+            '',
+            'Mohon tunggu...',
+          ].join('\n')
+        );
+
+        const aiProvider = container.resolve(TOKENS.AI_PROVIDER);
+        const allowedCategories = Object.keys(WORDPRESS_CATEGORY_MAP).join(', ');
+
+        const prompt = getHybridMetadataTemplate(
+          allowedCategories,
+          draft.hybridTitle,
+          draft.hybridBody
+        );
+        const result = await aiProvider.generate({
+          prompt,
+          schema: HYBRID_RESPONSE_SCHEMA,
+        });
+
+        const updatedDraft = draft.copyWith({
+          state: WORKFLOW_STATE.HYBRID_WAITING_IMAGE,
+          hybridMetadata: result,
+        });
+        await sessionManager.save(updatedDraft);
+
+        await telegramApi.sendMessage(
+          task.chatId,
+          [
+            '✅ *ANALISIS EDITORIAL GEMINI SELESAI!*',
+            '━━━━━━━━━━━━━━━━━━━━━━━━',
+            `🏷️ *Kategori:* ${result.category}`,
+            `📁 *Subkategori:* ${result.subcategory}`,
+            `🔑 *Focus Keyword:* ${result.focus_keyword}`,
+            `🌐 *Slug:* ${result.slug}`,
+            `⏱️ *Reading Time:* ${result.reading_time} menit`,
+            '━━━━━━━━━━━━━━━━━━━━━━━━',
+            '',
+            '📸 *LANGKAH TERAKHIR:*',
+            'Silakan kirim *Gambar Utama / Featured Image* untuk berita ini:',
+          ].join('\n')
+        );
+      } else if (task.taskType === 'HYBRID_PUBLISH') {
+        const draft = await sessionManager.get(task.chatId);
+        if (!draft) {
+          logger.warn('HYBRID_PUBLISH skipped: draft session not found', {
+            chatId: task.chatId,
+          });
+          return;
+        }
+
+        const metadata = draft.hybridMetadata;
+        const wordCount = draft.hybridBody.split(/\s+/).filter(Boolean).length;
+        const readingTime =
+          parseInt(metadata.reading_time, 10) || Math.max(1, Math.ceil(wordCount / 200));
+
+        const standardEditorial = {
+          article: {
+            title: draft.hybridTitle,
+            lead: metadata.excerpt || '',
+            content: draft.hybridBody,
+            excerpt: metadata.excerpt || '',
+          },
+          seo: {
+            focusKeyword: metadata.focus_keyword,
+            metaDescription: metadata.meta_description,
+            category: metadata.category,
+            tags: metadata.tags || [],
+            slug: metadata.slug,
+          },
+          statistics: {
+            wordCount,
+            readingTime,
+          },
+          quality: {
+            score: 100,
+            notes: ['Terbit aman via Hybrid Editor.'],
+          },
+        };
+
+        const hydratedDraft = draft.copyWith({
+          editorial: standardEditorial,
+        });
+
+        const publishingService = container.resolve(TOKENS.PUBLISHING_SERVICE);
+        const published = await publishingService.publish(hydratedDraft);
+
+        const totalDuration = Date.now() - new Date(hydratedDraft.createdAt).getTime();
+        const metrics = container.resolve(TOKENS.METRICS);
+
+        metrics.increment('publishing_completed', 1, { priority: 'HYBRID' });
+
+        const escapedTitle = escapeMarkdown(hydratedDraft.editorial.article.title);
+        const escapedAuthor = escapeMarkdown(task.userName);
+        const escapedCategory = escapeMarkdown(hydratedDraft.editorial.seo.category);
+
+        const publishReportText = [
+          '🚀 *ARTIKEL RESMI TERBIT VIA HYBRID EDITOR!*',
+          '━━━━━━━━━━━━━━━━━━',
+          `📰 *Judul:* ${escapedTitle}`,
+          `✍️ *Penulis:* ${escapedAuthor}`,
+          `🏷️ *Kanal:* ${escapedCategory}`,
+          `🚨 *Mode:* Hybrid (Preserve Original Narrative)`,
+          `⚡ *Waktu Kerja:* ${Math.ceil(totalDuration / 1000)} detik`,
+          '━━━━━━━━━━━━━━━━━━',
+          '',
+          `🔗 *URL Artikel:* [Klik untuk Membaca](${published.url})`,
+          '',
+          `🆔 *WP Post ID:* \`${published.id}\``,
+          '━━━━━━━━━━━━━━━━━━',
+        ].join('\n');
+
+        await sessionManager.cancel(task.chatId);
+        await telegramApi.sendMessage(
+          task.chatId,
+          `${publishReportText}\nSesi Hybrid Anda telah selesai ditutup. Silakan pilih menu di bawah untuk memulai kembali.`,
+          createStartSelectionKeyboard()
+        );
+
+        const config = container.resolve(TOKENS.CONFIGURATION);
+        if (config.telegram.groupChatId) {
+          try {
+            await telegramApi.sendMessage(config.telegram.groupChatId, publishReportText);
+          } catch (groupError) {
+            logger.error('Failed to send hybrid publish success report to Coordination Group', {
               error: groupError.message,
             });
           }
@@ -367,10 +490,10 @@ export class QueueManager {
           `_${escapeMarkdown(error.message)}_`,
           '',
           '🛡️ *Naskah Anda Tetap Aman!* Sistem berhasil memulihkan draf mentah Anda.',
-          'Anda tidak perlu mengirim ulang naskah. Silakan coba klik tombol *🏁 Mulai* atau kirim pesan apa saja beberapa saat lagi untuk memicu ulang proses.',
+          'Anda tidak perlu mengirim ulang naskah. Silakan kirim pesan apa saja beberapa saat lagi untuk memicu ulang proses.',
           '━━━━━━━━━━━━━━━━━━━━━━━━',
         ].join('\n'),
-        createMainKeyboard()
+        createStartSelectionKeyboard()
       );
     } finally {
       // =========================================================================

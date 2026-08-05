@@ -60,20 +60,28 @@ export class PublishingService {
 
       const file = await this.telegramApi.downloadFile(featured.fileId);
 
-      // 🚀 SATUKAN METADATA ARTIKEL UNTUK OPTIMALISASI BERKAS MEDIA WORDPRESS
-      const metadata = {
-        title: draft.editorial.article.title || '',
-        altText: draft.editorial.seo.focusKeyword || '',
-        caption: draft.editorial.article.excerpt || draft.editorial.article.lead || '',
-        description: draft.editorial.seo.metaDescription || '',
-      };
+      // 🚀 SELECTION SHIELD: Jika terbit via Hybrid Editor, gunakan metadata gambar kustom dari Gemini
+      const metadata = draft.hybridMetadata
+        ? {
+            title: draft.hybridMetadata.image_title || draft.hybridTitle || '',
+            altText: draft.hybridMetadata.image_alt || draft.hybridMetadata.focus_keyword || '',
+            caption: draft.hybridMetadata.image_caption || draft.hybridMetadata.excerpt || '',
+            description:
+              draft.hybridMetadata.image_description || draft.hybridMetadata.meta_description || '',
+          }
+        : {
+            title: draft.editorial.article.title || '',
+            altText: draft.editorial.seo.focusKeyword || '',
+            caption: draft.editorial.article.excerpt || draft.editorial.article.lead || '',
+            description: draft.editorial.seo.metaDescription || '',
+          };
 
       // Upload Media WordPress menggunakan dynamic auth & penyuntikan metadata komprehensif
       const media = await this.wordpressProvider.uploadMedia(
         file.fileName,
         file.mimeType,
         file.buffer,
-        metadata, // 🚀 Suntikkan parameter metadata kesini
+        metadata,
         customAuth
       );
 

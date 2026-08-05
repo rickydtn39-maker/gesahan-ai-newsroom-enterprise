@@ -1,0 +1,37 @@
+// FILE: src/application/editorial/schema/hybrid-response-schema.js
+
+export const HYBRID_RESPONSE_SCHEMA = Object.freeze({
+  type: 'object',
+  required: [
+    'category',
+    'subcategory',
+    'slug',
+    'seo_title',
+    'meta_description',
+    'excerpt',
+    'focus_keyword',
+    'tags',
+    'image_alt',
+    'image_title',
+    'image_caption',
+    'image_description',
+    'reading_time',
+    'schema',
+  ],
+  properties: {
+    category: { type: 'string' },
+    subcategory: { type: 'string' },
+    slug: { type: 'string' },
+    seo_title: { type: 'string' },
+    meta_description: { type: 'string' },
+    excerpt: { type: 'string' },
+    focus_keyword: { type: 'string' },
+    tags: { type: 'array', items: { type: 'string' } },
+    image_alt: { type: 'string' },
+    image_title: { type: 'string' },
+    image_caption: { type: 'string' },
+    image_description: { type: 'string' },
+    reading_time: { type: 'string' },
+    schema: { type: 'string', enum: ['NewsArticle'] },
+  },
+});

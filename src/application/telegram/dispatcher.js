@@ -3,11 +3,12 @@
 import { WORKFLOW_STATE } from '../../core/constants/index.js';
 import { TOKENS } from '../../core/container/tokens.js';
 import { MESSAGES } from '../../core/constants/messages.js';
+import { Draft } from '../../domain/draft/draft.js';
 
 import { startCommand } from './commands/start-command.js';
 import { helpCommand } from './commands/help-command.js';
 import { cancelCommand } from './commands/cancel-command.js';
-import { resetCommand } from './commands/reset-command.js'; // 🚀 Impor Reset Command Baru
+import { resetCommand } from './commands/reset-command.js';
 import { newArticleCommand } from './commands/new-article-command.js';
 import { articleCommand } from './commands/article-command.js';
 import { statusCommand } from './commands/status-command.js';
@@ -21,7 +22,15 @@ import { manualEditSaveCommand } from './commands/manual-edit-save-command.js';
 import { ocrArticleCommand } from './commands/ocr-article-command.js';
 import { angleSaveCommand } from './commands/angle-save-command.js';
 import { setAuthorCommand } from './commands/setauthor-command.js';
-import { themeSelectionCommand } from './commands/theme-selection-command.js';
+
+// IMPOR HANDLER WORKFLOW BARU HYBRID EDITOR
+import {
+  hybridWaitingTitleHandler,
+  hybridWaitingBodyHandler,
+  hybridWaitingImageHandler,
+} from './commands/hybrid-editor-command.js';
+
+import { createMainKeyboard, createStartSelectionKeyboard } from './keyboards/index.js';
 
 import {
   addUserCommand,
@@ -29,7 +38,6 @@ import {
   listUsersCommand,
   setuserprofileCommand,
 } from './commands/admin-commands.js';
-import { createMainKeyboard } from './keyboards/index.js';
 
 class CommandRegistry {
   constructor() {
@@ -63,7 +71,7 @@ const registry = new CommandRegistry()
   .registerStatic('♻️ Rewrite Lagi', rewriteCommand)
   .registerStatic('/cancel', cancelCommand)
   .registerStatic('❌ Batal', cancelCommand)
-  .registerStatic('/reset', resetCommand) // 🚀 Daftarkan rute reset darurat
+  .registerStatic('/reset', resetCommand)
   .registerStatic('🔄 Reset Sistem', resetCommand)
   .registerAdmin('/adduser', addUserCommand)
   .registerAdmin('/deluser', delUserCommand)
@@ -101,16 +109,6 @@ export async function dispatchTelegramUpdate(update, services) {
       return services.telegramApi.sendMessage(chatId, MESSAGES.AUTH.UNAUTHORIZED);
     }
 
-    if (text === '🏁 Selesai & Tutup') {
-      logger.info('Closing multi-theme session', { chatId });
-      await services.sessionManager.cancel(chatId);
-      return await services.telegramApi.sendMessage(
-        chatId,
-        '✅ *Sesi Podcast Berhasil Ditutup.*\n\nSisa draf tema telah dibersihkan secara aman dari database. Silakan klik menu di bawah untuk memulai kembali.',
-        createMainKeyboard()
-      );
-    }
-
     if (text === '/cancel' || text === '❌ Batal' || text === '/start' || text === '🏁 Mulai') {
       logger.info('Executing emergency session reset', { command: text, chatId });
       await services.sessionManager.cancel(chatId);
@@ -128,6 +126,40 @@ export async function dispatchTelegramUpdate(update, services) {
       return await setAuthorCommand(update, services.telegramApi, whitelistRepo, config);
     }
 
+    // =========================================================================
+    // DETEKSI INISIASI WORKFLOW METODE PEMILIHAN (HYBRID VS OTOMATIS)
+    // =========================================================================
+    if (text === '🤖 Otomatis Pipeline') {
+      await services.sessionManager.cancel(chatId); // Flush sesi lama
+      await services.sessionManager.create(chatId, userId, (cId, uId) => {
+        return new Draft({ chatId: cId, userId: uId, state: WORKFLOW_STATE.WAITING_ARTICLE });
+      });
+      return await services.telegramApi.sendMessage(
+        chatId,
+        MESSAGES.DRAFT.NEW_CREATED,
+        createMainKeyboard()
+      );
+    }
+
+    if (text === '✍️ Hybrid Editor') {
+      await services.sessionManager.cancel(chatId); // Flush sesi lama
+      await services.sessionManager.create(chatId, userId, (cId, uId) => {
+        return new Draft({ chatId: cId, userId: uId, state: WORKFLOW_STATE.HYBRID_WAITING_TITLE });
+      });
+      return await services.telegramApi.sendMessage(
+        chatId,
+        [
+          '✍️ *MODE HYBRID EDITOR AKTIF*',
+          '━━━━━━━━━━━━━━━━━━━━━━━━',
+          'Pada mode Hybrid, Anda memegang kendali penuh atas judul dan narasi berita asli.',
+          'AI Gemini bertindak sebagai Chief Editorial Intelligence untuk menganalisis dan menyiapkan SEO serta metadata tanpa mengubah teks Anda sedikit pun.',
+          '━━━━━━━━━━━━━━━━━━━━━━━━',
+          '',
+          'Silakan masukkan *Judul Berita* Anda:',
+        ].join('\n')
+      );
+    }
+
     const staticHandler = registry.staticCommands.get(text);
     if (staticHandler) {
       logger.info('Executing static command', { command: text });
@@ -141,10 +173,45 @@ export async function dispatchTelegramUpdate(update, services) {
 
     const draft = await services.sessionManager.get(chatId);
 
-    if (draft?.state === WORKFLOW_STATE.WAITING_THEME_SELECTION) {
-      return await themeSelectionCommand(update, services.telegramApi, services.sessionManager);
+    // Guard Lockout: Mencegah interaksi spam jika AI sedang memproses naskah Hybrid
+    if (
+      draft?.state === WORKFLOW_STATE.HYBRID_ANALYZING ||
+      draft?.state === WORKFLOW_STATE.HYBRID_PUBLISHING
+    ) {
+      return await services.telegramApi.sendMessage(
+        chatId,
+        '⏳ *Sistem sedang memproses data.* Silakan tunggu sejenak hingga proses analisis/publikasi aktif Anda selesai.'
+      );
     }
 
+    // =========================================================================
+    // ROUTING HANDLER STATE HYBRID EDITOR
+    // =========================================================================
+    if (draft?.state === WORKFLOW_STATE.HYBRID_WAITING_TITLE) {
+      return await hybridWaitingTitleHandler(update, services.telegramApi, services.sessionManager);
+    }
+
+    if (draft?.state === WORKFLOW_STATE.HYBRID_WAITING_BODY) {
+      return await hybridWaitingBodyHandler(
+        update,
+        services.telegramApi,
+        services.sessionManager,
+        services.container
+      );
+    }
+
+    if (draft?.state === WORKFLOW_STATE.HYBRID_WAITING_IMAGE) {
+      return await hybridWaitingImageHandler(
+        update,
+        services.telegramApi,
+        services.sessionManager,
+        services.container
+      );
+    }
+
+    // =========================================================================
+    // ROUTING HANDLER WORKFLOW AUTOMATIC PIPELINE (DEFAULT)
+    // =========================================================================
     if (update.hasPhoto || update.hasDocument) {
       if (draft?.state === WORKFLOW_STATE.WAITING_FEATURED_IMAGE && update.hasPhoto) {
         return await featuredImageCommand(update, services.telegramApi, services.sessionManager);
@@ -195,7 +262,8 @@ export async function dispatchTelegramUpdate(update, services) {
 
       return services.telegramApi.sendMessage(
         targetChatId,
-        '⚠️ *Terjadi kesalahan sistem internal.*\nSesi Anda telah direset otomatis. Silakan kirimkan kembali perintah Anda atau ketik /start.'
+        '⚠️ *Terjadi kesalahan sistem internal.*\nSesi Anda telah direset otomatis. Silakan pilih menu di bawah ini.',
+        createStartSelectionKeyboard()
       );
     }
   }

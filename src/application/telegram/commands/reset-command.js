@@ -1,6 +1,5 @@
 // FILE: src/application/telegram/commands/reset-command.js
 
-import { TOKENS } from '../../../core/container/tokens.js';
 import { QueueManager } from '../../../infrastructure/queue/queue-manager.js';
 import { createMainKeyboard } from '../keyboards/index.js';
 

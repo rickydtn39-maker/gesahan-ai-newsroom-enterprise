@@ -11,7 +11,6 @@ export function getGptPassTemplate(
   reporterContext,
   promptConfig
 ) {
-
   const datelineRule = promptConfig.datelineRule;
 
   return `
@@ -155,25 +154,25 @@ ${angleInstruction}
 
 # GAYA PENULISAN
 
-${promptConfig.writingTone.map(x=>"- "+x).join("\n")}
+${promptConfig.writingTone.map((x) => '- ' + x).join('\n')}
 
 ==================================================
 
 # ETIKA JURNALISTIK
 
-${JOURNALISM_RULES.coreEthics.map(x=>"- "+x).join("\n")}
+${JOURNALISM_RULES.coreEthics.map((x) => '- ' + x).join('\n')}
 
-${JOURNALISM_RULES.invertedPyramid.map(x=>"- "+x).join("\n")}
+${JOURNALISM_RULES.invertedPyramid.map((x) => '- ' + x).join('\n')}
 
-${JOURNALISM_RULES.quoteHandling.map(x=>"- "+x).join("\n")}
+${JOURNALISM_RULES.quoteHandling.map((x) => '- ' + x).join('\n')}
 
 ==================================================
 
 # HINDARI POLA GENERATIVE AI
 
-${AI_BYPASS_RULES.bannedCliches.map(x=>"- "+x).join("\n")}
+${AI_BYPASS_RULES.bannedCliches.map((x) => '- ' + x).join('\n')}
 
-${AI_BYPASS_RULES.flowOptimizations.map(x=>"- "+x).join("\n")}
+${AI_BYPASS_RULES.flowOptimizations.map((x) => '- ' + x).join('\n')}
 
 ==================================================
 
@@ -181,13 +180,13 @@ ${AI_BYPASS_RULES.flowOptimizations.map(x=>"- "+x).join("\n")}
 
 ## 1 Editorial Voice
 
-${guide.editorialVoice.rules.map(x=>"- "+x).join("\n")}
+${guide.editorialVoice.rules.map((x) => '- ' + x).join('\n')}
 
 ==================================================
 
 ## 2 Headline
 
-${guide.headline.rules.map(x=>"- "+x).join("\n")}
+${guide.headline.rules.map((x) => '- ' + x).join('\n')}
 
 Headline HARUS berasal dari fakta terbesar.
 
@@ -229,7 +228,7 @@ Lead maksimal dua kalimat.
 
 ## 4 Struktur
 
-${guide.flowAndStructure.rules.map(x=>"- "+x).join("\n")}
+${guide.flowAndStructure.rules.map((x) => '- ' + x).join('\n')}
 
 Gunakan urutan:
 
@@ -271,19 +270,19 @@ Penutup
 
 ## 5 Diksi
 
-${guide.dictionAndSentences.rules.map(x=>"- "+x).join("\n")}
+${guide.dictionAndSentences.rules.map((x) => '- ' + x).join('\n')}
 
 ==================================================
 
 ## 6 Layout
 
-${guide.layout.rules.map(x=>"- "+x).join("\n")}
+${guide.layout.rules.map((x) => '- ' + x).join('\n')}
 
 ==================================================
 
 ## 7 Kutipan
 
-${guide.quotes.rules.map(x=>"- "+x).join("\n")}
+${guide.quotes.rules.map((x) => '- ' + x).join('\n')}
 
 Jangan mengubah substansi kutipan.
 
@@ -293,7 +292,7 @@ Boleh memperbaiki ejaan.
 
 ## 8 Fact Checking
 
-${guide.factChecking.rules.map(x=>"- "+x).join("\n")}
+${guide.factChecking.rules.map((x) => '- ' + x).join('\n')}
 
 Lakukan pemeriksaan akhir.
 
@@ -315,7 +314,7 @@ Pastikan:
 
 ## 9 Etika
 
-${guide.ethics.rules.map(x=>"- "+x).join("\n")}
+${guide.ethics.rules.map((x) => '- ' + x).join('\n')}
 
 ==================================================
 
@@ -412,5 +411,4 @@ ${geminiResultJson}
 ${rawSourceText}
 
 `.trim();
-
 }
