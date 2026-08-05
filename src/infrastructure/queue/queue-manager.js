@@ -2,13 +2,9 @@
 
 import { TOKENS } from '../../core/container/tokens.js';
 import { WORKFLOW_STATE } from '../../core/constants/index.js';
-import {
-  createAngleKeyboard,
-  createReviewKeyboard,
-  createStartSelectionKeyboard,
-} from '../../application/telegram/keyboards/index.js';
+import { createMainKeyboard } from '../../application/telegram/keyboards/index.js';
 
-// IMPOR MODUL BARU UNTUK KEPATUHAN HYBRID EDITOR
+// IMPOR UNTUK METODE HYBRID EDITOR
 import { WORDPRESS_CATEGORY_MAP } from '../providers/wordpress/category-map.js';
 import { getHybridMetadataTemplate } from '../../application/editorial/prompt/templates/hybrid-metadata-template.js';
 import { HYBRID_RESPONSE_SCHEMA } from '../../application/editorial/schema/hybrid-response-schema.js';
@@ -22,11 +18,11 @@ function escapeMarkdown(text) {
 }
 
 export class QueueManager {
-  // 🚀 STATIC HELPER UNTUK PURGE ANTREAN SECARA TOTAL
+  // STATIC HELPER UNTUK PURGE ANTREAN SECARA TOTAL
   static async clearGlobalQueue(container) {
     const kv = container.resolve(TOKENS.DRAFT_REPOSITORY).storage.namespace;
     const logger = container.resolve(TOKENS.LOGGER);
-
+    
     logger.info('[Queue Manager] Emergency global queue flush executed.');
     await kv.put(QUEUE_KEY, JSON.stringify({ active: null, items: [] }));
   }
@@ -51,12 +47,9 @@ export class QueueManager {
 
     if (!queue.active || isLockExpired) {
       if (isLockExpired) {
-        logger.warn(
-          'Previous queue lock expired, forcing release, clearing old piled items and executing new task',
-          {
-            expiredTask: queue.active,
-          }
-        );
+        logger.warn('Previous queue lock expired, forcing release, clearing old piled items and executing new task', {
+          expiredTask: queue.active,
+        });
         queue.items = [];
       }
 
@@ -102,222 +95,9 @@ export class QueueManager {
       await new Promise((resolve) => setTimeout(resolve, 3000));
 
       // =========================================================================
-      // [A] TASK WORKFLOW AUTOMATIC PIPELINE (DEFAULT)
+      // TASK WORKFLOW HYBRID EDITOR (SINGLE WORKFLOW SYSTEM)
       // =========================================================================
-      if (task.taskType === 'STAGE_1_INGEST') {
-        let lockedDraft = await sessionManager.get(task.chatId);
-        if (!lockedDraft) {
-          logger.warn('STAGE_1_INGEST skipped: draft session not found or cancelled', {
-            chatId: task.chatId,
-          });
-          return;
-        }
-
-        if (task.payload?.ocrFileId) {
-          await telegramApi.sendMessage(
-            task.chatId,
-            '🔍 *Giliran Anda Tiba!* Mulai mengunduh dokumen & menjalankan pemindaian OCR...'
-          );
-
-          const ocrProvider = container.resolve(TOKENS.OCR_PROVIDER);
-          const downloadedFile = await telegramApi.downloadFile(task.payload.ocrFileId);
-          const extractedText = await ocrProvider.extractText(
-            downloadedFile.buffer,
-            downloadedFile.mimeType
-          );
-
-          lockedDraft = lockedDraft.copyWith({
-            source: {
-              ...lockedDraft.source,
-              type: 'text',
-              text: extractedText,
-            },
-          });
-          await sessionManager.save(lockedDraft);
-        }
-
-        await telegramApi.sendMessage(
-          task.chatId,
-          '⏳ *[STAGE 1] Gemini Reporter* sedang memindai, menganalisis SEO, dan mengklasifikasikan data...'
-        );
-
-        const editorialService = container.resolve(TOKENS.EDITORIAL_SERVICE);
-        const stage1Result = await editorialService.ingestStage1(lockedDraft);
-
-        const updatedDraft = lockedDraft.copyWith({
-          state: WORKFLOW_STATE.WAITING_ANGLE,
-          stage1: stage1Result,
-        });
-        await sessionManager.save(updatedDraft);
-
-        const priorityIcons = {
-          A: '🔴 [A - BREAKING NEWS]',
-          B: '🟡 [B - PUBLISH TODAY]',
-          C: '🟢 [C - EVERGREEN]',
-        };
-
-        await telegramApi.sendMessage(
-          task.chatId,
-          [
-            '📊 *HASIL ANALISIS INGEST GEMINI (STAGE 1)*',
-            '━━━━━━━━━━━━━━━━━━',
-            `🏷️ *Kategori:* ${stage1Result.wordpress.category}`,
-            `🔑 *Keyword:* ${stage1Result.seo.focusKeyword}`,
-            `🚨 *Prioritas:* ${priorityIcons[stage1Result.priority] || stage1Result.priority}`,
-            `📈 *News Score:* ${stage1Result.newsValue.score}/100`,
-            `🎯 *Draf Sementara Reporter:* "${stage1Result.draftReporter.title}"`,
-            '━━━━━━━━━━━━━━━━━━',
-            '',
-            '✍️ *STAGE 2: TENTUKAN SUDUT PANDANG (ANGLE)*',
-            'Silakan ketik angle khusus Anda atau klik tombol di bawah untuk default AI.',
-          ].join('\n'),
-          createAngleKeyboard()
-        );
-      } else if (task.taskType === 'STAGE_3_GENERATE') {
-        const draft = await sessionManager.get(task.chatId);
-        if (!draft) {
-          logger.warn('STAGE_3_GENERATE skipped: draft session not found or cancelled', {
-            chatId: task.chatId,
-          });
-          return;
-        }
-
-        const editorialService = container.resolve(TOKENS.EDITORIAL_SERVICE);
-        const result = await editorialService.generate(draft, draft.stage1);
-
-        const completedDraft = draft.copyWith({
-          state: WORKFLOW_STATE.WAITING_REVIEW,
-          editorial: result,
-        });
-        await sessionManager.save(completedDraft);
-
-        const escapedTitle = escapeMarkdown(result.article.title);
-        const escapedLead = escapeMarkdown(result.article.lead);
-        const escapedSlug = escapeMarkdown(result.seo.slug);
-        const escapedKeyword = escapeMarkdown(result.seo.focusKeyword);
-        const escapedCategory = escapeMarkdown(result.seo.category);
-
-        await telegramApi.sendMessage(
-          task.chatId,
-          [
-            '✅ *REDAKTUR PELAKSANA DIGITAL SELESAI SUNTING!*',
-            '',
-            '━━━━━━━━━━━━━━━━━━',
-            '',
-            '📰 JUDUL',
-            '',
-            escapedTitle,
-            '',
-            '━━━━━━━━━━━━━━━━━━',
-            '',
-            '📝 LEAD',
-            '',
-            escapedLead,
-            '',
-            '━━━━━━━━━━━━━━━━━━',
-            '',
-            '🔍 SEO',
-            '',
-            `Slug : ${escapedSlug}`,
-            `Keyword : ${escapedKeyword}`,
-            `Kategori : ${escapedCategory}`,
-            '',
-            '━━━━━━━━━━━━━━━━━━',
-            '',
-            '📊 STATISTIK',
-            '',
-            `Jumlah Kata : ${result.statistics.wordCount}`,
-            `Estimasi Baca : ${result.statistics.readingTime} menit`,
-            `Editorial Score : ${result.quality.score}/100`,
-            '',
-            '━━━━━━━━━━━━━━━━━━',
-            '',
-            '📄 Gunakan tombol "Lihat Artikel Lengkap" untuk membaca hasil penyuntingan.',
-            '',
-            'Silakan pilih tindakan berikut.',
-          ].join('\n'),
-          createReviewKeyboard()
-        );
-      } else if (task.taskType === 'PUBLISH') {
-        const draft = await sessionManager.get(task.chatId);
-        if (!draft) {
-          logger.warn('PUBLISH skipped: draft session not found or cancelled', {
-            chatId: task.chatId,
-          });
-          return;
-        }
-
-        const publishingService = container.resolve(TOKENS.PUBLISHING_SERVICE);
-        const published = await publishingService.publish(draft);
-
-        const publishDuration = Date.now() - task.startedAt;
-        const totalDuration = Date.now() - new Date(draft.createdAt).getTime();
-
-        const metrics = container.resolve(TOKENS.METRICS);
-
-        const analyticsLog = {
-          event: 'POST_PUBLISH_ANALYTICS',
-          articleId: published.id,
-          url: published.url,
-          title: draft.editorial.article.title,
-          focusKeyword: draft.editorial.seo.focusKeyword,
-          newsScore: draft.stage1.newsValue.score,
-          priority: draft.stage1.priority,
-          ocrConfidence: draft.stage1.confidence.ocrAccuracy || 'N/A',
-          wordCount: draft.editorial.statistics.wordCount,
-          durationMs: {
-            publishing: publishDuration,
-            totalWorkflow: totalDuration,
-          },
-          publishedAt: new Date().toISOString(),
-        };
-
-        logger.info('Publishing process successfully completed.', analyticsLog);
-        metrics.increment('publishing_completed', 1, { priority: draft.stage1.priority });
-
-        const escapedTitle = escapeMarkdown(draft.editorial.article.title);
-        const escapedAuthor = escapeMarkdown(task.userName);
-        const escapedCategory = escapeMarkdown(draft.editorial.seo.category);
-
-        const publishReportText = [
-          '🚀 *ARTIKEL RESMI TERBIT DI MEDIA NASIONAL!*',
-          '━━━━━━━━━━━━━━━━━━',
-          `📰 *Judul:* ${escapedTitle}`,
-          `✍️ *Penulis:* ${escapedAuthor}`,
-          `🏷️ *Kanal:* ${escapedCategory}`,
-          `🚨 *Priority:* ${draft.stage1.priority}`,
-          `⚡ *Waktu Kerja:* ${Math.ceil(totalDuration / 1000)} detik`,
-          '━━━━━━━━━━━━━━━━━━',
-          '',
-          `🔗 *URL Artikel:* [Klik untuk Membaca](${published.url})`,
-          '',
-          `🆔 *WP Post ID:* \`${published.id}\``,
-          '━━━━━━━━━━━━━━━━━━',
-        ].join('\n');
-
-        await sessionManager.cancel(task.chatId);
-        await telegramApi.sendMessage(
-          task.chatId,
-          `${publishReportText}\nSesi draf ini telah ditutup dengan aman. Silakan pilih menu di bawah ini untuk memulai kembali.`,
-          createStartSelectionKeyboard()
-        );
-
-        const config = container.resolve(TOKENS.CONFIGURATION);
-        if (config.telegram.groupChatId) {
-          try {
-            await telegramApi.sendMessage(config.telegram.groupChatId, publishReportText);
-          } catch (groupError) {
-            logger.error('Failed to send publish success report to Coordination Group', {
-              error: groupError.message,
-            });
-          }
-        }
-      }
-
-      // =========================================================================
-      // [B] TASK WORKFLOW HYBRID EDITOR (WORKFLOW BARU)
-      // =========================================================================
-      else if (task.taskType === 'HYBRID_STAGE_3_ANALYZE') {
+      if (task.taskType === 'HYBRID_STAGE_3_ANALYZE') {
         const draft = await sessionManager.get(task.chatId);
         if (!draft) {
           logger.warn('HYBRID_STAGE_3_ANALYZE skipped: draft session not found', {
@@ -337,18 +117,14 @@ export class QueueManager {
             '✔ Menentukan metadata',
             '✔ Menyiapkan publikasi',
             '',
-            'Mohon tunggu...',
+            'Mohon tunggu...'
           ].join('\n')
         );
 
         const aiProvider = container.resolve(TOKENS.AI_PROVIDER);
         const allowedCategories = Object.keys(WORDPRESS_CATEGORY_MAP).join(', ');
 
-        const prompt = getHybridMetadataTemplate(
-          allowedCategories,
-          draft.hybridTitle,
-          draft.hybridBody
-        );
+        const prompt = getHybridMetadataTemplate(allowedCategories, draft.hybridTitle, draft.hybridBody);
         const result = await aiProvider.generate({
           prompt,
           schema: HYBRID_RESPONSE_SCHEMA,
@@ -373,7 +149,7 @@ export class QueueManager {
             '━━━━━━━━━━━━━━━━━━━━━━━━',
             '',
             '📸 *LANGKAH TERAKHIR:*',
-            'Silakan kirim *Gambar Utama / Featured Image* untuk berita ini:',
+            'Silakan kirim *Gambar Utama / Featured Image* untuk berita ini:'
           ].join('\n')
         );
       } else if (task.taskType === 'HYBRID_PUBLISH') {
@@ -387,23 +163,18 @@ export class QueueManager {
 
         const metadata = draft.hybridMetadata;
         const wordCount = draft.hybridBody.split(/\s+/).filter(Boolean).length;
-        const readingTime =
-          parseInt(metadata.reading_time, 10) || Math.max(1, Math.ceil(wordCount / 200));
+        const readingTime = parseInt(metadata.reading_time, 10) || Math.max(1, Math.ceil(wordCount / 200));
 
-        // 🚀 RESOLVED DOUBLE-LEAD: Membelah hybridBody secara dinamis.
-        // Paragraf 1 naskah asli wartawan dipetakan menjadi "lead", Paragraf 2..N menjadi "content".
-        const paragraphs = draft.hybridBody
-          .split(/\r?\n\r?\n/)
-          .map((p) => p.trim())
-          .filter(Boolean);
+        // Membelah hybridBody secara dinamis. Paragraf 1 naskah asli menjadi "lead", Paragraf 2..N menjadi "content".
+        const paragraphs = draft.hybridBody.split(/\r?\n\r?\n/).map(p => p.trim()).filter(Boolean);
         const lead = paragraphs[0] || '';
         const content = paragraphs.slice(1).join('\n\n');
 
         const standardEditorial = {
           article: {
             title: draft.hybridTitle,
-            lead: lead, // 🚀 Paragraf 1 adalah lead
-            content: content, // 🚀 Paragraf 2..N adalah isi
+            lead: lead,
+            content: content,
             excerpt: metadata.excerpt || lead,
           },
           seo: {
@@ -420,7 +191,7 @@ export class QueueManager {
           quality: {
             score: 100,
             notes: ['Terbit aman via Hybrid Editor.'],
-          },
+          }
         };
 
         const hydratedDraft = draft.copyWith({
@@ -459,7 +230,7 @@ export class QueueManager {
         await telegramApi.sendMessage(
           task.chatId,
           `${publishReportText}\nSesi Hybrid Anda telah selesai ditutup. Silakan pilih menu di bawah untuk memulai kembali.`,
-          createStartSelectionKeyboard()
+          createMainKeyboard()
         );
 
         const config = container.resolve(TOKENS.CONFIGURATION);
@@ -502,7 +273,7 @@ export class QueueManager {
           'Anda tidak perlu mengirim ulang naskah. Silakan kirim pesan apa saja beberapa saat lagi untuk memicu ulang proses.',
           '━━━━━━━━━━━━━━━━━━━━━━━━',
         ].join('\n'),
-        createStartSelectionKeyboard()
+        createMainKeyboard()
       );
     } finally {
       // =========================================================================

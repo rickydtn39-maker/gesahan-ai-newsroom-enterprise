@@ -1,3 +1,5 @@
+// FILE: src/application/telegram/keyboards/main-keyboard.js
+
 export function createMainKeyboard() {
   return {
     keyboard: [

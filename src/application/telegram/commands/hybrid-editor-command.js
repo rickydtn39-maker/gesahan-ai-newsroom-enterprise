@@ -1,6 +1,7 @@
 // FILE: src/application/telegram/commands/hybrid-editor-command.js
 
 import { WORKFLOW_STATE } from '../../../core/constants/index.js';
+import { TOKENS } from '../../../core/container/tokens.js';
 import { QueueManager } from '../../../infrastructure/queue/queue-manager.js';
 
 export async function hybridWaitingTitleHandler(update, telegramApi, sessionManager) {
@@ -30,7 +31,7 @@ export async function hybridWaitingTitleHandler(update, telegramApi, sessionMana
       `📝 *Judul:* "${incomingText}"`,
       '',
       'Silakan kirim *Narasi Lengkap Berita* Anda:',
-      '_(Format paragraf panjang akan aman digabungkan secara otomatis)_',
+      '_(Format paragraf panjang akan aman digabungkan secara otomatis)_'
     ].join('\n')
   );
 }
@@ -45,22 +46,22 @@ export async function hybridWaitingBodyHandler(update, telegramApi, sessionManag
     );
   }
 
+  const currentTimestamp = Date.now();
+  const draftRepository = container.resolve(TOKENS.DRAFT_REPOSITORY);
+
+  // 1. Simpan potongan teks langsung ke laci penyimpanan unik KV (Anti Race-Condition)
+  await draftRepository.saveBufferPart(update.chatId, update.messageId, 'hybrid', incomingText);
+
   const draft = await sessionManager.get(update.chatId);
   if (!draft) return;
 
-  // 🛡️ DEBOUNCE BUFFER ACCUMULATION: Menggabungkan potongan chat Telegram yang terpisah secara otomatis
-  const existingBody = draft.hybridBody || '';
-  const combinedBody = existingBody ? `${existingBody}\n${incomingText}` : incomingText;
   const nextPartCount = (draft.bufferPartCount || 0) + 1;
-  const currentTimestamp = Date.now();
 
-  const draftWithBody = draft.copyWith({
-    hybridBody: combinedBody,
+  const draftWithMeta = draft.copyWith({
     bufferTimestamp: currentTimestamp,
     bufferPartCount: nextPartCount,
   });
-
-  await sessionManager.save(draftWithBody);
+  await sessionManager.save(draftWithMeta);
 
   if (nextPartCount === 1) {
     await telegramApi.sendMessage(
@@ -69,22 +70,34 @@ export async function hybridWaitingBodyHandler(update, telegramApi, sessionManag
     );
   }
 
-  const delayMs = 2000;
+  const delayMs = 2500; // Timer tunggu aman untuk replikasi KV Cloudflare
   const draftId = draft.id;
   const chatId = update.chatId;
   const ctx = container.has('ctx') ? container.resolve('ctx') : null;
 
+  // 2. Jalankan logika pengumpulan data asinkron
   const processHybridBodyTask = async () => {
     await new Promise((resolve) => setTimeout(resolve, delayMs));
 
     const latestDraft = await sessionManager.get(chatId);
     if (!latestDraft || latestDraft.id !== draftId) return;
-    if (latestDraft.bufferTimestamp !== currentTimestamp) return;
 
-    // Kunci status draf ke tahap pemrosesan antrean Gemini
+    // Hanya eksekusi jika ini adalah potongan chat terakhir yang masuk (Debounce Leader)
+    if (latestDraft.bufferTimestamp !== currentTimestamp) {
+      return;
+    }
+
+    // Unduh dan satukan seluruh potongan narasi yang terkumpul di KV secara urut
+    const combinedBody = await draftRepository.getAndClearCombinedBuffer(chatId, 'hybrid');
+
+    if (!combinedBody) {
+      return;
+    }
+
     const lockedDraft = latestDraft.copyWith({
       state: WORKFLOW_STATE.HYBRID_ANALYZING,
-      bufferPartCount: 0, // Reset hitungan buffer
+      bufferPartCount: 0, // Reset
+      hybridBody: combinedBody
     });
     await sessionManager.save(lockedDraft);
 
