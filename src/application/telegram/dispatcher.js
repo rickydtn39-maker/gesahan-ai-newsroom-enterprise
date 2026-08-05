@@ -7,6 +7,7 @@ import { MESSAGES } from '../../core/constants/messages.js';
 import { startCommand } from './commands/start-command.js';
 import { helpCommand } from './commands/help-command.js';
 import { cancelCommand } from './commands/cancel-command.js';
+import { resetCommand } from './commands/reset-command.js'; // 🚀 Impor Reset Command Baru
 import { newArticleCommand } from './commands/new-article-command.js';
 import { articleCommand } from './commands/article-command.js';
 import { statusCommand } from './commands/status-command.js';
@@ -62,10 +63,12 @@ const registry = new CommandRegistry()
   .registerStatic('♻️ Rewrite Lagi', rewriteCommand)
   .registerStatic('/cancel', cancelCommand)
   .registerStatic('❌ Batal', cancelCommand)
+  .registerStatic('/reset', resetCommand) // 🚀 Daftarkan rute reset darurat
+  .registerStatic('🔄 Reset Sistem', resetCommand)
   .registerAdmin('/adduser', addUserCommand)
   .registerAdmin('/deluser', delUserCommand)
   .registerAdmin('/listusers', listUsersCommand)
-  .registerAdmin('/setuserprofile', setuserprofileCommand); // 🚀 Daftarkan rute perintah admin baru
+  .registerAdmin('/setuserprofile', setuserprofileCommand);
 
 export async function dispatchTelegramUpdate(update, services) {
   const logger = services.container.resolve(TOKENS.LOGGER);
@@ -167,7 +170,6 @@ export async function dispatchTelegramUpdate(update, services) {
       );
     }
 
-    // 🚀 FIXED: Meneruskan parameter services.origin agar terdeteksi sempurna di Engine 1
     return await articleCommand(
       update,
       services.telegramApi,

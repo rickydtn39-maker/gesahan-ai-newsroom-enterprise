@@ -13,7 +13,6 @@ export class GeminiProvider extends AiProvider {
 
   async generate(request) {
     const startTime = Date.now();
-    // 🚀 MENGGUNAKAN ENDPOINT v1beta UNTUK DUKUNGAN NATIVE JSON SCHEMA
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
 
     this.logger.info('Executing Gemini API call', { model: this.model });
@@ -30,14 +29,14 @@ export class GeminiProvider extends AiProvider {
       ],
       generationConfig: {
         temperature: 0.2,
-        // 🚀 INTEGRASI NATIVE JSON SCHEMA PADA ENDPOINT v1beta
         responseMimeType: request.schema ? 'application/json' : 'text/plain',
         responseSchema: request.schema ? request.schema : undefined,
       },
     };
 
-    const maxRetries = 5;
-    let delay = 2000; // Mulai delay dari 2 detik
+    // 🚀 FAIL-FAST SHIELD: Mengunci maksimal 3 kali percobaan untuk mencegah Worker timeout
+    const maxRetries = 3;
+    let delay = 1000;
     let response;
     let payload;
 
@@ -54,12 +53,11 @@ export class GeminiProvider extends AiProvider {
         payload = await response.json();
 
         if (response.ok) {
-          break; // Sukses, keluar dari loop retry
+          break;
         }
 
         const status = response.status;
 
-        // Lakukan retry HANYA jika terkena Rate Limit (429) atau Server Error (5xx)
         if (status === 429 || status >= 500) {
           if (attempt === maxRetries) {
             this.metrics.increment('gemini_api_errors', 1, { status: String(status) });
@@ -68,8 +66,7 @@ export class GeminiProvider extends AiProvider {
             );
           }
 
-          // Tambahkan jitter acak (0-1000ms) agar request tidak bertabrakan serentak
-          const jitter = Math.random() * 1000;
+          const jitter = Math.random() * 500;
           const sleepTime = delay + jitter;
 
           this.logger.warn(
@@ -83,11 +80,10 @@ export class GeminiProvider extends AiProvider {
           });
 
           await new Promise((resolve) => setTimeout(resolve, sleepTime));
-          delay *= 2; // Penggandaan eksponensial (2s, 4s, 8s, 16s...)
+          delay *= 2;
           continue;
         }
 
-        // Jika error Client lain (400, 401, 403, 404), langsung lempar error tanpa retry
         this.metrics.increment('gemini_api_errors', 1, { status: String(status) });
         throw new Error(
           `Gemini Client Error (${status}): ${payload?.error?.message || 'Bad Request'}`
@@ -100,8 +96,7 @@ export class GeminiProvider extends AiProvider {
           throw error;
         }
 
-        // Tangani kegagalan koneksi fisik/timeout
-        const jitter = Math.random() * 1000;
+        const jitter = Math.random() * 500;
         const sleepTime = delay + jitter;
         this.logger.warn(
           `[Gemini Connection Shield] Connection error: ${error.message}. Retrying attempt ${attempt}/${maxRetries} in ${Math.round(sleepTime)}ms...`

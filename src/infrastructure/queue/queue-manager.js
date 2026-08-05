@@ -18,36 +18,42 @@ function escapeMarkdown(text) {
 }
 
 export class QueueManager {
+  // 🚀 STATIC HELPER UNTUK PURGE ANTREAN SECARA TOTAL
+  static async clearGlobalQueue(container) {
+    const kv = container.resolve(TOKENS.DRAFT_REPOSITORY).storage.namespace;
+    const logger = container.resolve(TOKENS.LOGGER);
+    
+    logger.info('[Queue Manager] Emergency global queue flush executed.');
+    await kv.put(QUEUE_KEY, JSON.stringify({ active: null, items: [] }));
+  }
+
   static async add(chatId, userId, taskType, payload, container) {
     const kv = container.resolve(TOKENS.DRAFT_REPOSITORY).storage.namespace;
     const telegramApi = container.resolve(TOKENS.TELEGRAM_API);
     const whitelistRepo = container.resolve(TOKENS.WHITELIST_REPOSITORY);
     const logger = container.resolve(TOKENS.LOGGER);
 
-    // Dapatkan nama asli wartawan untuk pesan informasi antrean yang ramah
     const whitelist = await whitelistRepo.getAll();
     const user = whitelist.find((u) => Number(u.userId) === Number(userId));
     const userName = user ? user.name : `Wartawan #${userId}`;
 
-    // Baca status antrean saat ini
     let queue = await kv.get(QUEUE_KEY, { type: 'json' });
     if (!queue) {
       queue = { active: null, items: [] };
     }
 
     const now = Date.now();
-
-    // Verifikasi apakah proses aktif saat ini sudah kedaluwarsa (lebih dari 2 menit)
     const isLockExpired = queue.active && now - queue.active.startedAt > MAX_LOCK_TIME_MS;
 
     if (!queue.active || isLockExpired) {
       if (isLockExpired) {
-        logger.warn('Previous queue lock expired, forcing release and executing new task', {
+        logger.warn('Previous queue lock expired, forcing release, clearing old piled items and executing new task', {
           expiredTask: queue.active,
         });
+        // 🚀 AUTO-PURGE ON EXPIRY: Jika antrean lama kedaluwarsa/hang, sapu bersih sisa draf menumpuk yang sudah hang
+        queue.items = [];
       }
 
-      // Ambil kunci global dan jalankan langsung
       queue.active = { chatId, userId, userName, taskType, payload, startedAt: now };
       await kv.put(QUEUE_KEY, JSON.stringify(queue));
 
@@ -88,9 +94,7 @@ export class QueueManager {
     logger.info('Starting queued task execution', { taskType: task.taskType, userId: task.userId });
 
     try {
-      // 🚀 ENTERPRISE RATE LIMIT SHIELD:
-      // Suntikkan jeda ritmik wajib selama 3 detik sebelum setiap pemicuan AI.
-      // Ini memastikan request tersebar dengan jarak aman dan tidak melompati RPM kuota!
+      // Jeda ritmik wajib agar API request tersebar aman
       await new Promise((resolve) => setTimeout(resolve, 3000));
 
       if (task.taskType === 'STAGE_1_INGEST') {
@@ -102,8 +106,6 @@ export class QueueManager {
           return;
         }
 
-        // 🔍 INTEGRASI PROSES OCR DALAM ANTREAN AMAN:
-        // Jika ada ocrFileId di payload, lakukan download & OCR secara berseri di bawah penguncian antrean
         if (task.payload?.ocrFileId) {
           await telegramApi.sendMessage(
             task.chatId,
@@ -223,14 +225,6 @@ export class QueueManager {
             '',
             '━━━━━━━━━━━━━━━━━━',
             '',
-            '📋 QC PASSED REPORT',
-            '',
-            ...(result.quality.notes.length > 0
-              ? result.quality.notes.map((note) => `• ${escapeMarkdown(note)}`)
-              : ['• Pemeriksaan QC Selesai, fakta 100% konsisten.']),
-            '',
-            '━━━━━━━━━━━━━━━━━━',
-            '',
             '📄 Gunakan tombol "Lihat Artikel Lengkap" untuk membaca hasil penyuntingan.',
             '',
             'Silakan pilih tindakan berikut.',
@@ -331,7 +325,7 @@ export class QueueManager {
           await sessionManager.cancel(task.chatId);
           await telegramApi.sendMessage(
             task.chatId,
-            `${publishReportText}\nSesi draf ini telah ditutup dengan aman. Silakan klik "📰 Berita Baru" untuk memulai kembali.`,
+            `${publishReportText}\nSesi draf ini telah ditutup dengan aman. Silakan klik \"📰 Berita Baru\" untuk memulai kembali.`,
             createMainKeyboard()
           );
         }
@@ -350,7 +344,6 @@ export class QueueManager {
     } catch (error) {
       logger.error('Error executing task in queue', { task, error: error.message });
 
-      // SAFE-FALLBACK: Amankan data naskah mentah asli ke KV, kembalikan status ke IDLE
       try {
         const activeDraft = await sessionManager.get(task.chatId);
         if (activeDraft) {
@@ -365,7 +358,6 @@ export class QueueManager {
         });
       }
 
-      // Beritahu pengguna tentang kegagalan proses
       await telegramApi.sendMessage(
         task.chatId,
         [
@@ -391,20 +383,17 @@ export class QueueManager {
         if (queue.items.length > 0) {
           const nextTask = queue.items.shift();
 
-          // Set tugas berikutnya sebagai aktif
           queue.active = {
             ...nextTask,
             startedAt: Date.now(),
           };
           await kv.put(QUEUE_KEY, JSON.stringify(queue));
 
-          // Beritahu wartawan berikutnya tentang giliran mereka yang sudah dimulai
           await telegramApi.sendMessage(
             nextTask.chatId,
             '🟢 *GILIRAN ANDA DIMULAI!*\n\nSistem kini mulai menganalisis naskah Anda ke server AI. Mohon tunggu...'
           );
 
-          // Jalankan kembali secara rekursif asinkron
           const ctx = container.has('ctx') ? container.resolve('ctx') : null;
           if (ctx && typeof ctx.waitUntil === 'function') {
             ctx.waitUntil(QueueManager.execute(queue.active, container));
@@ -412,7 +401,6 @@ export class QueueManager {
             QueueManager.execute(queue.active, container);
           }
         } else {
-          // Kosongkan kunci global jika tidak ada lagi antrean yang tersisa
           queue.active = null;
           await kv.put(QUEUE_KEY, JSON.stringify(queue));
           logger.info('Global queue is now empty, lock released.');

@@ -8,10 +8,8 @@ export class GeminiOcrProvider {
 
   async extractText(buffer, mimeType) {
     const modelName = this.model;
-    // 🚀 MENGGUNAKAN ENDPOINT v1beta AGAR KONSISTEN DENGAN GEMINI PROVIDER UTAMA
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${this.apiKey}`;
 
-    // Chunked buffer to base64 encoding untuk menghindari CPU throttling di Cloudflare Workers
     const bytes = new Uint8Array(buffer);
     let binary = '';
     const chunkLength = 8192;
@@ -41,8 +39,9 @@ export class GeminiOcrProvider {
       },
     };
 
-    const maxRetries = 5;
-    let delay = 2000;
+    // 🚀 FAIL-FAST SHIELD: Mengunci maksimal 3 kali percobaan untuk mencegah Worker timeout
+    const maxRetries = 3;
+    let delay = 1000;
     let response;
     let payload;
 
@@ -59,7 +58,7 @@ export class GeminiOcrProvider {
         payload = await response.json();
 
         if (response.ok) {
-          break; // Sukses, keluar dari loop
+          break;
         }
 
         const status = response.status;
@@ -71,7 +70,7 @@ export class GeminiOcrProvider {
             );
           }
 
-          const jitter = Math.random() * 1000;
+          const jitter = Math.random() * 500;
           const sleepTime = delay + jitter;
 
           console.warn(
@@ -91,7 +90,7 @@ export class GeminiOcrProvider {
           throw error;
         }
 
-        const jitter = Math.random() * 1000;
+        const jitter = Math.random() * 500;
         const sleepTime = delay + jitter;
         console.warn(
           `[Gemini OCR Shield] Connection error: ${error.message}. Retrying attempt ${attempt}/${maxRetries} in ${Math.round(sleepTime)}ms...`
